@@ -1,4 +1,4 @@
-google gemini | https://www.gemini.google.com | kod yazmada ve resim çizmede en iyi yapay zekalardan biridir
+google gemini | https://gemini.google.com/app | kod yazmada ve resim çizmede en iyi yapay zekalardan biridir
 yt | https://www.youtube.com | google nin video izleme sitesi
 gmail | https://workspace.google.com/intl/tr/gmail/ | google şirketin mail servisi
 Fix Al Codex | https://sites.google.com/view/fixai/fix-al-codex | Fixing in kod yazan yapay zeka sı
