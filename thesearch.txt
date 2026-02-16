@@ -1,4 +1,5 @@
 google gemini | https://gemini.google.com/app | kod yazmada ve resim çizmede en iyi yapay zekalardan biridir
+ pptx | https://fixing-by.github.io/Fixflash/ |  Fixing in orjinal pptx görüntüleyicisidir
 yt | https://www.youtube.com | google nin video izleme sitesi
 gmail | https://workspace.google.com/intl/tr/gmail/ | google şirketin mail servisi
 Fix Al Codex | https://sites.google.com/view/fixai/fix-al-codex | Fixing in kod yazan yapay zeka sı
