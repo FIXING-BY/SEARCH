@@ -1,3 +1,9 @@
+JAVA | https://fixing-by.github.io/coder/java | GÜÇLÜ NESNE MİMARİSİ VE MANTIK  
+C    | https://fixing-by.github.io/coder/c | sistem seviyesi ve yüksek performans
+PYTHONE | https://fixing-by.github.io/coder/pythone | basit ve yapay zeka üretiminde kullanılır
+HTML | https://fixing-by.github.io/coder/html | web de vaz geçilmez
+LYNX | https://fixing-by.github.io/coder/lynx | LYNX TÜRKÇE BİR DİL DİR FİXİNGİN ORJİNAL DİLİDİR GENELDE OBFEX İN ALT SÜRÜMLERİ VE YA FİXİNG WEB DE KULLANILIR  
+FİXİNG CODER | https://fixing-by.github.io/coder/ | FİXİNG CODER İLE 5 ANE ÜCRETSİZ DİL YAZIN 
 google gemini | https://gemini.google.com/app | kod yazmada ve resim çizmede en iyi yapay zekalardan biridir
  pptx | https://fixing-by.github.io/Fixflash/ |  Fixing in orjinal pptx görüntüleyicisidir
 yt | https://www.youtube.com | google nin video izleme sitesi
