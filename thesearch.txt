@@ -1,7 +1,7 @@
 Stack Overflow | https://stackoverflow.com | Programlama soruları ve cevapları sitesi
 Amazon | https://www.amazon.com | Dünya çapında en büyük e-ticaret platformu, geniş ürün yelpazesi ve hızlı teslimat hizmetiyle online alışverişte lider konumda.
 BBC News | https://www.bbc.com/news | Global news coverage with in‑depth reporting and analysis.
-The New York Times | https://www.nytimes.com | Leading U.S. newspaper offering investigative journalism and opinion pieces.
+nexsus | https://fixing-by.github.io/Nexsus/ | Nexsus e ticaret sitesi
 The Guardian | https://www.theguardian.com | British news outlet known for comprehensive reporting and progressive commentary.
 Al Jazeera English | https://www.aljazeera.com | International news network focusing on Middle East and global affairs.
 Reuters | https://www.reuters.com | Real‑time news service delivering business, politics, and market updates.
