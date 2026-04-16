@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Qono wheel </title>
+    <style>
+        :root { --bg: #050505; --glass: rgba(255, 255, 255, 0.02); --border: rgba(255, 255, 255, 0.08); --accent: #00ff88; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg); height: 100vh; display: flex; justify-content: center; align-items: center; color: white; overflow: hidden; }
+
+        .app {
+            background: var(--glass); backdrop-filter: blur(60px); border: 1px solid var(--border);
+            border-radius: 40px; width: 900px; height: 600px; display: grid; grid-template-columns: 320px 1fr;
+            box-shadow: 0 50px 150px rgba(0,0,0,1);
+        }
+
+        /* SOL PANEL: AYARLAR */
+        .sidebar { border-right: 1px solid var(--border); padding: 40px; display: flex; flex-direction: column; background: rgba(0,0,0,0.2); }
+        .label { font-size: 0.55rem; letter-spacing: 3px; color: #444; text-transform: uppercase; margin-bottom: 15px; }
+        
+        .input-box { background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 15px; padding: 15px; color: #fff; outline: none; margin-bottom: 10px; width: 100%; font-size: 0.8rem; }
+        
+        .option-list { flex-grow: 1; overflow-y: auto; margin-bottom: 20px; }
+        .opt-item { background: rgba(255,255,255,0.02); padding: 10px 15px; border-radius: 10px; margin-bottom: 5px; font-size: 0.75rem; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border); }
+        .opt-item span { color: var(--accent); cursor: pointer; font-weight: 900; }
+
+        .btn { background: #fff; color: #000; padding: 15px; border-radius: 15px; cursor: pointer; font-size: 0.75rem; font-weight: 800; border: none; text-transform: uppercase; transition: 0.3s; }
+        .btn:hover { background: var(--accent); transform: translateY(-2px); }
+
+        /* SAĞ PANEL: ÇARK */
+        .main { display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; }
+        
+        .wheel-container { position: relative; width: 400px; height: 400px; border-radius: 50%; border: 10px solid var(--border); box-shadow: 0 0 50px rgba(0,0,0,0.5); overflow: hidden; }
+        canvas { width: 100%; height: 100%; transition: transform 4s cubic-bezier(0.15, 0, 0.15, 1); }
+
+        .pointer { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 30px; height: 30px; background: #fff; clip-path: polygon(50% 100%, 0 0, 100% 0); z-index: 10; }
+        
+        #result { margin-top: 30px; font-size: 1.5rem; font-weight: 900; color: var(--accent); min-height: 2rem; text-shadow: 0 0 20px rgba(0,255,136,0.3); }
+    </style>
+</head>
+<body>
+
+    <div class="app">
+        <div class="sidebar">
+            <div class="label">Seçenek Ekle</div>
+            <input type="text" id="optIn" class="input-box" placeholder="Bir seçenek yaz..." onkeypress="if(event.key==='Enter') addOpt()">
+            
+            <div class="label" style="margin-top:20px;">Liste</div>
+            <div class="option-list" id="optList"></div>
+
+            <button class="btn" onclick="spin()">ÇARKı ÇEVİR</button>
+        </div>
+
+        <div class="main">
+            <div class="pointer"></div>
+            <div class="wheel-container">
+                <canvas id="wheel"></canvas>
+            </div>
+            <div id="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('wheel');
+        const ctx = canvas.getContext('2d');
+        const resultDiv = document.getElementById('result');
+        let options = ["Pizza", "Burger", "Kebap", "Salata"];
+        let isSpinning = false;
+
+        function drawWheel() {
+            const size = 400;
+            canvas.width = size;
+            canvas.height = size;
+            const arc = (2 * Math.PI) / options.length;
+
+            ctx.clearRect(0, 0, size, size);
+
+            options.forEach((opt, i) => {
+                const angle = i * arc;
+                ctx.beginPath();
+                ctx.fillStyle = i % 2 === 0 ? "#111" : "#181818"; // Glassmorphism uyumlu koyu tonlar
+                ctx.moveTo(size/2, size/2);
+                ctx.arc(size/2, size/2, size/2, angle, angle + arc);
+                ctx.fill();
+                ctx.strokeStyle = "rgba(255,255,255,0.05)";
+                ctx.stroke();
+
+                // Yazı çizimi
+                ctx.save();
+                ctx.translate(size/2, size/2);
+                ctx.rotate(angle + arc / 2);
+                ctx.textAlign = "right";
+                ctx.fillStyle = "#fff";
+                ctx.font = "bold 14px Inter";
+                ctx.fillText(opt, size/2 - 20, 5);
+                ctx.restore();
+            });
+        }
+
+        function addOpt() {
+            const val = document.getElementById('optIn').value.trim();
+            if(val) {
+                options.push(val);
+                document.getElementById('optIn').value = "";
+                renderList();
+                drawWheel();
+            }
+        }
+
+        function removeOpt(index) {
+            if(options.length > 2) {
+                options.splice(index, 1);
+                renderList();
+                drawWheel();
+            } else {
+                alert("En az 2 seçenek olmalı kanka!");
+            }
+        }
+
+        function renderList() {
+            const list = document.getElementById('optList');
+            list.innerHTML = options.map((opt, i) => `
+                <div class="opt-item">
+                    ${opt} <span onclick="removeOpt(${i})">×</span>
+                </div>
+            `).join('');
+        }
+
+        function spin() {
+            if(isSpinning) return;
+            isSpinning = true;
+            resultDiv.innerText = "Dönüyor...";
+
+            const extraSpins = 5 + Math.random() * 5;
+            const randomAngle = Math.random() * 360;
+            const totalRotation = extraSpins * 360 + randomAngle;
+
+            canvas.style.transform = `rotate(${totalRotation}deg)`;
+
+            setTimeout(() => {
+                isSpinning = false;
+                const actualAngle = totalRotation % 360;
+                const sectorAngle = 360 / options.length;
+                // Çarkın durduğu yeri hesapla (0 derece sağ taraftır, biz üstü baz alıyoruz)
+                const winIndex = Math.floor(((360 - actualAngle + 270) % 360) / sectorAngle);
+                resultDiv.innerText = "KAZANAN: " + options[winIndex];
+            }, 4000);
+        }
+
+        // Başlangıç
+        renderList();
+        drawWheel();
+    </script>
+</body>
+</html>

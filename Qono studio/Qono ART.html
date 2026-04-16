@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qono Quantum | Encapsulated Physics</title>
+    <style>
+        :root {
+            --bg: #000;
+            --glass: rgba(255, 255, 255, 0.02);
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body {
+            background: var(--bg);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            overflow: hidden;
+        }
+
+        .art-card {
+            background: var(--glass);
+            backdrop-filter: blur(60px);
+            border: 1px solid var(--border);
+            padding: 50px;
+            border-radius: 60px;
+            width: 950px;
+            height: 650px;
+            box-shadow: 0 50px 150px rgba(0,0,0,1);
+            z-index: 10;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 40px;
+        }
+
+        /* FİZİK ALANI (KUTUYA HAPSEDİLDİ) */
+        .interaction-zone {
+            background: #000;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 40px;
+            position: relative;
+            cursor: crosshair;
+            overflow: hidden; /* Dışarı taşmayı engeller */
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .zone-label {
+            position: absolute;
+            bottom: 20px; left: 20px;
+            font-size: 0.5rem;
+            color: #222;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            font-weight: 800;
+            pointer-events: none;
+        }
+
+        /* KONTROL PANELİ */
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .brand {
+            font-size: 0.7rem;
+            letter-spacing: 16px;
+            color: #222;
+            margin-bottom: 40px;
+            text-transform: uppercase;
+        }
+        .brand b { color: #fff; font-weight: 800; }
+
+        .status-block {
+            background: rgba(255, 255, 255, 0.01);
+            padding: 25px;
+            border-radius: 30px;
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.6rem;
+            color: #444;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .status-val { color: #fff; font-family: monospace; }
+
+        .btn-action {
+            width: 100%;
+            padding: 20px;
+            border-radius: 25px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: #444;
+            font-weight: 900;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-action:hover { border-color: #fff; color: #fff; }
+    </style>
+</head>
+<body>
+
+    <div class="art-card">
+        <div class="interaction-zone" id="zone">
+            <canvas id="physicsCanvas"></canvas>
+            <div class="zone-label">Internal Physics Core</div>
+        </div>
+
+        <div class="control-panel">
+            <div>
+                <div class="brand">QONO <b>ART</b></div>
+                
+                <div class="status-block">
+                    <div class="status-item"><span>Engine</span><span class="status-val">V2.0 Encapsulated</span></div>
+                    <div class="status-item"><span>Status</span><span class="status-val">Isolated</span></div>
+                </div>
+
+                <div class="status-block">
+                    <div class="status-item"><span>Particles</span><span class="status-val" id="pCount">0</span></div>
+                    <div class="status-item"><span>Nodes</span><span class="status-val" id="nCount">0</span></div>
+                </div>
+            </div>
+
+            <button class="btn-action" id="clearBtn">Clear Core</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('physicsCanvas');
+        const ctx = canvas.getContext('2d');
+        const zone = document.getElementById('zone');
+        
+        // Canvas'ı kutu boyutuna eşitle
+        function syncSize() {
+            canvas.width = zone.offsetWidth;
+            canvas.height = zone.offsetHeight;
+        }
+        window.addEventListener('resize', syncSize);
+        syncSize();
+
+        let particles = [];
+        let hue = 180;
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.life = 100;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vx *= 0.98;
+                this.vy *= 0.98;
+                this.life -= 0.8;
+            }
+            draw() {
+                ctx.fillStyle = `hsla(${hue}, 100%, 70%, ${this.life / 100})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function loop() {
+            ctx.fillStyle = 'rgba(0,0,0,0.15)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            let nodes = 0;
+            particles = particles.filter(p => p.life > 0);
+
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+
+                    if (dist < 80) {
+                        nodes++;
+                        ctx.strokeStyle = `hsla(${hue}, 100%, 70%, ${(1 - dist/80) * 0.3})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            document.getElementById('pCount').textContent = particles.length;
+            document.getElementById('nCount').textContent = nodes;
+            hue = (hue + 0.5) % 360;
+            requestAnimationFrame(loop);
+        }
+
+        zone.onmousemove = (e) => {
+            const rect = zone.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            if (particles.length < 200) {
+                for(let i=0; i<3; i++) particles.push(new Particle(mouseX, mouseY));
+            }
+        };
+
+        document.getElementById('clearBtn').onclick = () => particles = [];
+
+        loop();
+    </script>
+</body>
+</html>

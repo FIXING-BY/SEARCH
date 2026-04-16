@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qono Chrono | Precision</title>
+    <style>
+        :root {
+            --bg: #000;
+            --glass: rgba(255, 255, 255, 0.02);
+            --border: rgba(255, 255, 255, 0.08);
+            --anim-speed: 0.3s; 
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body {
+            background: var(--bg);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* AKIŞ EFEKTİ */
+        .flow-layer {
+            position: absolute;
+            top: 0; left: -150%;
+            width: 300%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent 0%, #000 20%, #fff 50%, #000 80%, transparent 100%);
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        .active-flow {
+            animation: flowMove 0.18s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            opacity: 1;
+        }
+
+        @keyframes flowMove {
+            0% { left: -150%; transform: skewX(-20deg); }
+            100% { left: 100%; transform: skewX(-20deg); }
+        }
+
+        .timer-card {
+            background: var(--glass);
+            backdrop-filter: blur(50px);
+            border: 1px solid var(--border);
+            padding: 60px 50px;
+            border-radius: 60px;
+            width: 560px;
+            text-align: center;
+            box-shadow: 0 40px 120px rgba(0,0,0,0.9);
+            z-index: 10;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+        }
+
+        .timer-card:active { transform: scale(0.99); }
+
+        .brand {
+            font-size: 0.8rem;
+            letter-spacing: 16px;
+            color: #333;
+            margin-bottom: 60px;
+            text-transform: uppercase;
+            font-weight: 200;
+        }
+        .brand b { color: #fff; font-weight: 800; }
+
+        .display-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 50px;
+            height: 110px;
+        }
+
+        .segment {
+            width: 55px;
+            height: 100px;
+            overflow: hidden;
+            position: relative;
+            font-size: 6rem;
+            font-weight: 100;
+            line-height: 100px;
+        }
+
+        /* Milisaniye için daha küçük segment */
+        .segment.ms {
+            width: 35px;
+            font-size: 3rem;
+            color: #444;
+            line-height: 115px;
+        }
+
+        .segment-inner {
+            display: flex;
+            flex-direction: row;
+            width: 200%;
+            height: 100%;
+            transition: transform var(--anim-speed) cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .segment-inner div { width: 50%; text-align: center; }
+
+        .separator {
+            font-size: 3rem;
+            font-weight: 100;
+            color: #1a1a1a;
+            margin-bottom: 10px;
+        }
+
+        /* LAPS (TUR) BÖLGESİ */
+        .laps-container {
+            max-height: 0;
+            opacity: 0;
+            overflow-y: auto;
+            transition: all 0.6s ease;
+            margin-bottom: 0;
+            text-align: left;
+            padding: 0 20px;
+        }
+
+        .laps-container.visible {
+            max-height: 150px;
+            opacity: 1;
+            margin-bottom: 40px;
+            border-top: 1px solid var(--border);
+            padding-top: 20px;
+        }
+
+        .lap-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #666;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.02);
+        }
+
+        .controls { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+
+        button {
+            padding: 24px; border-radius: 28px; border: none; cursor: pointer;
+            font-weight: 900; text-transform: uppercase; letter-spacing: 4px; 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        button:active { transform: scale(0.92); }
+
+        .btn-start { background: #fff; color: #000; }
+        .btn-lap { background: transparent; color: #444; border: 1px solid var(--border); }
+        .btn-lap:hover { color: #fff; border-color: #fff; }
+
+        .card-bump { transform: scale(1.03); }
+        
+        /* Scrollbar Gizleme */
+        .laps-container::-webkit-scrollbar { width: 0px; }
+    </style>
+</head>
+<body>
+
+    <div class="flow-layer" id="flow"></div>
+
+    <div class="timer-card" id="card">
+        <div class="brand">QONO <b>CHRONO</b></div>
+        
+        <div class="display-container">
+            <div class="digit-group" style="display:flex;"><div class="segment"><div class="segment-inner" id="m1"><div>0</div><div>0</div></div></div><div class="segment"><div class="segment-inner" id="m2"><div>0</div><div>0</div></div></div></div>
+            <div class="separator">:</div>
+            <div class="digit-group" style="display:flex;"><div class="segment"><div class="segment-inner" id="s1"><div>0</div><div>0</div></div></div><div class="segment"><div class="segment-inner" id="s2"><div>0</div><div>0</div></div></div></div>
+            <div class="separator" style="color:#333">.</div>
+            <div class="digit-group" style="display:flex;"><div class="segment ms"><div class="segment-inner" id="ms1"><div>0</div><div>0</div></div></div><div class="segment ms"><div class="segment-inner" id="ms2"><div>0</div><div>0</div></div></div></div>
+        </div>
+
+        <div class="laps-container" id="lapsContainer"></div>
+
+        <div class="controls">
+            <button class="btn-start" id="startBtn">START</button>
+            <button class="btn-lap" id="lapBtn">LAP</button>
+        </div>
+    </div>
+
+    <script>
+        let startTime, elapsedTime = 0, timerInterval;
+        let isRunning = false;
+        let lastStr = "000000";
+        let laps = [];
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const flowLayer = document.getElementById('flow');
+        const card = document.getElementById('card');
+        const lapsContainer = document.getElementById('lapsContainer');
+
+        function playBeep() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, now);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(now + 0.1);
+
+            // Flow Effect
+            flowLayer.classList.remove('active-flow');
+            void flowLayer.offsetWidth; 
+            flowLayer.classList.add('active-flow');
+            card.classList.add('card-bump');
+            setTimeout(() => card.classList.remove('card-bump'), 150);
+        }
+
+        function updateDisplay() {
+            let tempTime = elapsedTime;
+            const m = Math.floor(tempTime / 60000);
+            tempTime %= 60000;
+            const s = Math.floor(tempTime / 1000);
+            const ms = Math.floor((tempTime % 1000) / 10);
+
+            const currentStr = String(m).padStart(2,'0') + String(s).padStart(2,'0') + String(ms).padStart(2,'0');
+            const ids = ['m1', 'm2', 's1', 's2', 'ms1', 'ms2'];
+
+            ids.forEach((id, i) => {
+                const el = document.getElementById(id);
+                if (currentStr[i] !== lastStr[i]) {
+                    el.children[1].textContent = currentStr[i];
+                    el.style.transform = 'translateX(-50%)';
+                    setTimeout(() => {
+                        el.style.transition = 'none';
+                        el.children[0].textContent = currentStr[i];
+                        el.style.transform = 'translateX(0)';
+                        requestAnimationFrame(() => { el.style.transition = ''; });
+                    }, 300);
+                }
+            });
+            lastStr = currentStr;
+        }
+
+        document.getElementById('startBtn').onclick = function() {
+            if (!isRunning) {
+                isRunning = true;
+                this.textContent = "STOP";
+                this.style.background = "#fff";
+                this.style.color = "#000";
+                document.getElementById('lapBtn').textContent = "LAP";
+                startTime = Date.now() - elapsedTime;
+                timerInterval = setInterval(() => {
+                    elapsedTime = Date.now() - startTime;
+                    updateDisplay();
+                }, 10);
+            } else {
+                isRunning = false;
+                this.textContent = "RESUME";
+                document.getElementById('lapBtn').textContent = "RESET";
+                clearInterval(timerInterval);
+                playBeep(); // Durdurunca vurgu yap
+            }
+        };
+
+        document.getElementById('lapBtn').onclick = function() {
+            if (isRunning) {
+                // LAP (Tur Al)
+                playBeep();
+                const lapTime = lastStr.substring(0,2) + ":" + lastStr.substring(2,4) + "." + lastStr.substring(4,6);
+                laps.unshift(lapTime);
+                renderLaps();
+            } else {
+                // RESET
+                elapsedTime = 0;
+                lastStr = "000000";
+                laps = [];
+                updateDisplay();
+                renderLaps();
+                document.getElementById('startBtn').textContent = "START";
+                this.textContent = "LAP";
+            }
+        };
+
+        function renderLaps() {
+            if (laps.length > 0) lapsContainer.classList.add('visible');
+            else lapsContainer.classList.remove('visible');
+
+            lapsContainer.innerHTML = laps.map((time, i) => `
+                <div class="lap-item">
+                    <span>LAP ${laps.length - i}</span>
+                    <span style="color:#fff; font-family:monospace;">${time}</span>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>

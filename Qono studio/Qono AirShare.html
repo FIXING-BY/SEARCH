@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qono AirShare | Secure P2P</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        :root {
+            --bg: #000;
+            --glass: rgba(255, 255, 255, 0.02);
+            --border: rgba(255, 255, 255, 0.08);
+            --accent: #00ff88;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg); height: 100vh; display: flex; justify-content: center; align-items: center; color: white; overflow: hidden; }
+
+        .share-card {
+            background: var(--glass);
+            backdrop-filter: blur(80px);
+            border: 1px solid var(--border);
+            border-radius: 50px;
+            width: 900px;
+            height: 600px;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            box-shadow: 0 60px 180px rgba(0,0,0,1);
+            position: relative;
+        }
+
+        /* SIDEBAR */
+        .sidebar { border-right: 1px solid var(--border); padding: 40px; display: flex; flex-direction: column; background: rgba(255,255,255,0.01); }
+        .label { font-size: 0.55rem; letter-spacing: 4px; color: #444; text-transform: uppercase; margin-bottom: 12px; }
+        #myID { font-size: 1.1rem; font-weight: 900; color: var(--accent); background: transparent; border: none; width: 100%; outline: none; }
+        
+        .connect-box { margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border); }
+        .peer-input { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 12px; width: 100%; margin-bottom: 10px; outline: none; }
+        
+        .btn { background: #fff; color: #000; padding: 12px; border-radius: 12px; border: none; width: 100%; cursor: pointer; font-weight: 800; font-size: 0.7rem; text-transform: uppercase; transition: 0.3s; }
+        .btn:hover { background: var(--accent); }
+
+        /* ANA ALAN */
+        .main-drop { display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 50px; text-align: center; }
+        .drop-zone { width: 100%; height: 100%; border: 2px dashed var(--border); border-radius: 40px; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: 0.4s; cursor: pointer; }
+        .drop-zone.active { border-color: var(--accent); background: rgba(0,255,136,0.05); }
+
+        /* ONAY MODALI (REQUEST PANEL) */
+        .modal-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);
+            display: none; justify-content: center; align-items: center; z-index: 1000;
+            border-radius: 50px;
+        }
+
+        .modal {
+            background: #fff; color: #000; padding: 40px; border-radius: 30px;
+            width: 320px; text-align: center; box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+        }
+
+        .modal h3 { font-size: 1rem; margin-bottom: 10px; }
+        .modal p { font-size: 0.8rem; margin-bottom: 25px; color: #666; }
+        .modal-btns { display: flex; gap: 10px; }
+        .m-btn { flex: 1; padding: 12px; border-radius: 12px; border: none; cursor: pointer; font-weight: 800; }
+        .btn-yes { background: #000; color: #fff; }
+        .btn-no { background: #eee; color: #000; }
+
+    </style>
+</head>
+<body>
+
+    <div class="modal-overlay" id="requestOverlay">
+        <div class="modal">
+            <h3>Bağlantı İsteği</h3>
+            <p><b id="requesterID">FIX-0000</b> sana bağlanmak istiyor. Onaylıyor musun?</p>
+            <div class="modal-btns">
+                <button class="m-btn btn-yes" onclick="answerRequest(true)">ONAYLA</button>
+                <button class="m-btn btn-no" onclick="answerRequest(false)">REDDET</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="share-card">
+        <div class="sidebar">
+            <div class="label">Senin FIX ID</div>
+            <input type="text" id="myID" readonly value="Yükleniyor...">
+            <p id="status" style="font-size: 0.6rem; color: #444; margin-top: 5px;">● Sunucuya bağlanılıyor...</p>
+
+            <div class="connect-box">
+                <div class="label">Başka Cihaza Bağlan</div>
+                <input type="text" id="peerIDInput" class="peer-input" placeholder="FIX-XXXX">
+                <button class="btn" onclick="requestConnection()">İSTEK GÖNDER</button>
+            </div>
+        </div>
+
+        <div class="main-drop">
+            <div class="drop-zone" id="dropArea" onclick="document.getElementById('fInput').click()">
+                <div id="icon" style="font-size: 4rem; margin-bottom: 20px; opacity: 0.2;">🛡️</div>
+                <h2 id="targetText">Güvenli Mod Aktif</h2>
+                <p id="subText" style="color: #333; font-size: 0.75rem; margin-top: 10px;">Bağlanmak için bir ID girin veya bekleyin</p>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="fInput" style="display:none">
+
+    <script>
+        const peer = new Peer('FIX-' + Math.floor(1000 + Math.random() * 9000));
+        let conn;
+        let pendingConn;
+
+        peer.on('open', (id) => {
+            document.getElementById('myID').value = id;
+            document.getElementById('status').innerText = "● Paylaşıma Hazır";
+        });
+
+        // Birisi sana bağlanmak istediğinde (İSTEK GELİNCE)
+        peer.on('connection', (c) => {
+            pendingConn = c;
+            document.getElementById('requesterID').innerText = c.peer;
+            document.getElementById('requestOverlay').style.display = 'flex';
+        });
+
+        function answerRequest(accept) {
+            document.getElementById('requestOverlay').style.display = 'none';
+            if (accept && pendingConn) {
+                conn = pendingConn;
+                setupConnection();
+                conn.send({ type: 'ACCEPT' }); // Karşıya onay gönder
+            } else {
+                pendingConn.send({ type: 'REJECT' });
+                pendingConn.close();
+            }
+        }
+
+        // Sen birine istek attığında
+        function requestConnection() {
+            const targetID = document.getElementById('peerIDInput').value;
+            if (targetID === peer.id) return alert("Kendi kendine bağlanamazsın!");
+            
+            conn = peer.connect(targetID);
+            document.getElementById('targetText').innerText = "İstek Gönderildi...";
+            
+            conn.on('data', (data) => {
+                if (data.type === 'ACCEPT') {
+                    setupConnection();
+                    alert("İstek kabul edildi!");
+                } else if (data.type === 'REJECT') {
+                    alert("Bağlantı reddedildi.");
+                    conn.close();
+                }
+            });
+        }
+
+        function setupConnection() {
+            document.getElementById('targetText').innerHTML = `<b>${conn.peer}</b> ile Bağlı!`;
+            document.getElementById('subText').innerText = "Sürükle bırak ile dosya gönderebilirsin";
+            document.getElementById('icon').innerText = "📁";
+            document.getElementById('icon').style.opacity = "1";
+            
+            conn.on('data', (data) => {
+                if (data.file) {
+                    const blob = new Blob([data.file], { type: data.type });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = data.name;
+                    a.click();
+                }
+            });
+        }
+
+        // Dosya Gönderme Mantığı
+        const dropArea = document.getElementById('dropArea');
+        dropArea.ondragover = (e) => { e.preventDefault(); dropArea.classList.add('active'); };
+        dropArea.ondragleave = () => dropArea.classList.remove('active');
+        dropArea.ondrop = (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('active');
+            if (conn && conn.open) sendFile(e.dataTransfer.files[0]);
+        };
+
+        document.getElementById('fInput').onchange = (e) => {
+            if (conn && conn.open) sendFile(e.target.files[0]);
+        };
+
+        function sendFile(file) {
+            if (!file) return;
+            conn.send({
+                file: file,
+                name: file.name,
+                type: file.type
+            });
+            alert("Dosya fırlatıldı!");
+        }
+    </script>
+</body>
+</html>

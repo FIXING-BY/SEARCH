@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qono Vector Pro | Studio</title>
+    <style>
+        :root {
+            --bg: #000;
+            --glass: rgba(255, 255, 255, 0.02);
+            --border: rgba(255, 255, 255, 0.08);
+            --accent: #fff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body {
+            background: var(--bg);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            overflow: hidden;
+        }
+
+        .studio-card {
+            background: var(--glass);
+            backdrop-filter: blur(60px);
+            border: 1px solid var(--border);
+            border-radius: 50px;
+            width: 95vw;
+            height: 85vh;
+            display: grid;
+            grid-template-columns: 260px 1fr 260px;
+            box-shadow: 0 50px 150px rgba(0,0,0,1);
+            overflow: hidden;
+        }
+
+        .panel {
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background: rgba(255, 255, 255, 0.01);
+            z-index: 10;
+        }
+        .left-panel { border-right: 1px solid var(--border); }
+        .right-panel { border-left: 1px solid var(--border); }
+
+        .brand { font-size: 0.7rem; letter-spacing: 12px; color: #222; text-transform: uppercase; text-align: center; margin-bottom: 20px; }
+        .brand b { color: #fff; }
+
+        .group-label { font-size: 0.55rem; letter-spacing: 3px; color: #444; text-transform: uppercase; font-weight: 800; }
+
+        .tool-btn {
+            padding: 15px; border-radius: 18px; border: 1px solid var(--border);
+            background: transparent; color: #666; cursor: pointer; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;
+            transition: 0.3s;
+        }
+        .tool-btn.active { background: #fff; color: #000; border-color: #fff; box-shadow: 0 0 20px rgba(255,255,255,0.2); }
+
+        .shape-opt {
+            background: rgba(255,255,255,0.02); border: 1px solid var(--border);
+            padding: 15px; border-radius: 20px; cursor: pointer; text-align: center; transition: 0.2s;
+        }
+        .shape-opt:hover { border-color: #fff; transform: translateY(-2px); }
+
+        .canvas-container { position: relative; background: #000; overflow: hidden; }
+        canvas { display: block; width: 100%; height: 100%; }
+
+        #svgOutput {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            width: 80%; background: #fff; color: #000;
+            padding: 20px; border-radius: 20px; font-family: monospace; font-size: 0.7rem;
+            display: none; z-index: 100; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        .export-btn { background: #fff !important; color: #000 !important; font-weight: 900 !important; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="studio-card">
+        <div class="panel left-panel">
+            <div class="brand">QONO <b> VEC STUDIO</b></div>
+            
+            <div class="group-label">Tools</div>
+            <button id="moveBtn" class="tool-btn active">Move & Resize</button>
+            <button id="eraserBtn" class="tool-btn">Circle Eraser</button>
+
+            <div class="group-label" style="margin-top:20px">Appearance</div>
+            <input type="color" id="colorPicker" value="#ffffff" style="width:100%; height:40px; border:none; cursor:pointer;">
+            <input type="range" id="opacitySlider" min="0.1" max="1" step="0.1" value="1">
+            <span style="font-size:0.5rem; color:#333; text-align:center;">OPACITY</span>
+
+            <button onclick="exportSVG()" class="tool-btn export-btn">VIEW SVG CODE</button>
+        </div>
+
+        <div class="canvas-container" id="box">
+            <canvas id="canvas"></canvas>
+            <div id="svgOutput" onclick="this.style.display='none'"></div>
+        </div>
+
+        <div class="panel right-panel">
+            <div class="group-label">Shapes</div>
+            <div class="shape-opt" onclick="add('sharp')"><div style="width:20px;height:20px;border:2px solid #fff;margin:auto"></div></div>
+            <div class="shape-opt" onclick="add('round')"><div style="width:20px;height:20px;border:2px solid #fff;border-radius:6px;margin:auto"></div></div>
+            <div class="shape-opt" onclick="add('circle')"><div style="width:20px;height:20px;border:2px solid #fff;border-radius:50%;margin:auto"></div></div>
+            
+            <div class="group-label" style="margin-top:20px">Eraser Size</div>
+            <input type="range" id="eraserSize" min="10" max="100" value="40">
+            
+            <button onclick="shapes=[]" class="tool-btn" style="margin-top:auto; border-color:#333;">Clear Project</button>
+        </div>
+    </div>
+
+    <script>
+        const cvs = document.getElementById('canvas');
+        const ctx = cvs.getContext('2d');
+        const box = document.getElementById('box');
+        
+        let shapes = [];
+        let selected = null;
+        let mode = 'move';
+        let isDown = false;
+        let dragTarget = null; // 'move' or 'resize'
+        let mx, my, ox, oy;
+
+        function resize() {
+            cvs.width = box.offsetWidth;
+            cvs.height = box.offsetHeight;
+        }
+        window.onresize = resize;
+        resize();
+
+        document.getElementById('moveBtn').onclick = () => { mode = 'move'; updateUI(); };
+        document.getElementById('eraserBtn').onclick = () => { mode = 'eraser'; updateUI(); };
+
+        function updateUI() {
+            document.getElementById('moveBtn').classList.toggle('active', mode === 'move');
+            document.getElementById('eraserBtn').classList.toggle('active', mode === 'eraser');
+        }
+
+        function add(type) {
+            shapes.push({
+                x: 100, y: 100, w: 120, h: 120,
+                color: document.getElementById('colorPicker').value,
+                opacity: document.getElementById('opacitySlider').value,
+                radius: type === 'round' ? 20 : (type === 'circle' ? 60 : 0),
+                type: type
+            });
+        }
+
+        cvs.onmousedown = (e) => {
+            isDown = true;
+            const r = cvs.getBoundingClientRect();
+            mx = e.clientX - r.left;
+            my = e.clientY - r.top;
+
+            if (mode === 'move') {
+                selected = null;
+                // En üstteki şekli seç
+                for (let i = shapes.length - 1; i >= 0; i--) {
+                    let s = shapes[i];
+                    // Resize Handle (Sağ Alt Köşe) Kontrolü
+                    if (mx > s.x + s.w - 15 && mx < s.x + s.w + 5 && my > s.y + s.h - 15 && my < s.y + s.h + 5) {
+                        selected = s;
+                        dragTarget = 'resize';
+                        return;
+                    }
+                    // Gövde Kontrolü
+                    if (mx > s.x && mx < s.x + s.w && my > s.y && my < s.y + s.h) {
+                        selected = s;
+                        dragTarget = 'move';
+                        ox = mx - s.x;
+                        oy = my - s.y;
+                        return;
+                    }
+                }
+            }
+        };
+
+        cvs.onmousemove = (e) => {
+            const r = cvs.getBoundingClientRect();
+            let curX = e.clientX - r.left;
+            let curY = e.clientY - r.top;
+
+            if (isDown) {
+                if (mode === 'move' && selected) {
+                    if (dragTarget === 'move') {
+                        selected.x = curX - ox;
+                        selected.y = curY - oy;
+                    } else {
+                        selected.w = Math.max(20, curX - selected.x);
+                        selected.h = Math.max(20, curY - selected.y);
+                        if(selected.type === 'circle') selected.radius = selected.w / 2;
+                    }
+                } else if (mode === 'eraser') {
+                    applyEraser(curX, curY);
+                }
+            }
+            mx = curX; my = curY;
+        };
+
+        cvs.onmouseup = () => { isDown = false; dragTarget = null; };
+
+        function applyEraser(ex, ey) {
+            const eSize = document.getElementById('eraserSize').value;
+            shapes = shapes.filter(s => {
+                // Silgi dairesi ile şekil karesi kesişimi (Basit mantık: Silgi merkezi şeklin içindeyse sil)
+                const dist = Math.sqrt((ex - (s.x + s.w/2))**2 + (ey - (s.y + s.h/2))**2);
+                return dist > eSize; // Silginin değdiği şekli komple siler (Bölme yerine temizleme daha stabil)
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, cvs.width, cvs.height);
+            
+            shapes.forEach(s => {
+                ctx.globalAlpha = s.opacity;
+                ctx.fillStyle = s.color;
+                ctx.beginPath();
+                ctx.roundRect(s.x, s.y, s.w, s.h, Math.min(s.radius, s.w/2));
+                ctx.fill();
+
+                if (s === selected && mode === 'move') {
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(s.x, s.y, s.w, s.h);
+                    // Resize Handle
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(s.x + s.w - 8, s.y + s.h - 8, 10, 10);
+                }
+            });
+
+            if (mode === 'eraser') {
+                ctx.globalAlpha = 0.3;
+                ctx.strokeStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(mx, my, document.getElementById('eraserSize').value, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            requestAnimationFrame(draw);
+        }
+
+        function exportSVG() {
+            let svg = `<svg width="${cvs.width}" height="${cvs.height}" xmlns="http://www.w3.org/2000/svg">\n`;
+            shapes.forEach(s => {
+                svg += `  <rect x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" rx="${s.radius}" fill="${s.color}" opacity="${s.opacity}" />\n`;
+            });
+            svg += `</svg>`;
+            const out = document.getElementById('svgOutput');
+            out.textContent = svg;
+            out.style.display = 'block';
+        }
+
+        draw();
+    </script>
+</body>
+</html>

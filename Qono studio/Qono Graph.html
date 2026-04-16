@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Qono Graph | Stable Layout</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --bg: #050505; --glass: rgba(255, 255, 255, 0.02); --border: rgba(255, 255, 255, 0.08); --accent: #00ff88; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg); height: 100vh; display: flex; justify-content: center; align-items: center; color: white; overflow: hidden; padding: 20px; }
+
+        .app {
+            background: var(--glass); backdrop-filter: blur(60px); border: 1px solid var(--border);
+            border-radius: 40px; width: 100%; max-width: 1000px; height: 90vh; 
+            display: flex; flex-direction: column;
+            box-shadow: 0 50px 150px rgba(0,0,0,1); padding: 30px;
+        }
+
+        .input-section { 
+            display: flex; gap: 15px; align-items: center; margin-bottom: 25px; 
+            flex-shrink: 0; /* Üst kısmın küçülmesini engeller */
+        }
+        
+        .y-label { font-weight: 900; font-size: 1.5rem; color: var(--accent); flex-shrink: 0; }
+
+        .formula-box {
+            flex: 1; min-width: 0; /* Grid/Flex taşmasını önleyen kritik ayar */
+            background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+            border-radius: 20px; padding: 15px 20px; color: #fff; font-size: 1.1rem;
+            font-family: 'Fira Code', monospace; outline: none; transition: 0.2s;
+        }
+        .formula-box:focus { border-color: var(--accent); background: rgba(255,255,255,0.06); }
+
+        .btn {
+            background: #fff; color: #000; padding: 0 30px; height: 55px; border-radius: 20px;
+            font-weight: 800; cursor: pointer; border: none; text-transform: uppercase;
+            flex-shrink: 0; transition: 0.2s;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255,255,255,0.1); }
+
+        .chart-container { 
+            flex: 1; min-height: 0; /* Alt kısmın konteynere sığmasını sağlar */
+            background: rgba(0,0,0,0.2); border-radius: 30px; padding: 15px; border: 1px solid var(--border); 
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app">
+        <div class="input-section">
+            <div class="y-label">y =</div>
+            <input type="text" id="formulaInput" class="formula-box" placeholder="x^2, sin(x)..." value="x^2">
+            <button class="btn" onclick="draw()">Çiz</button>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="graphCanvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let myChart = null;
+
+        function draw() {
+            let raw = document.getElementById('formulaInput').value.toLowerCase();
+            let formula = raw
+                .replace(/\^/g, "**")
+                .replace(/sin/g, "Math.sin")
+                .replace(/cos/g, "Math.cos")
+                .replace(/tan/g, "Math.tan")
+                .replace(/sqrt/g, "Math.sqrt")
+                .replace(/abs/g, "Math.abs")
+                .replace(/pi/g, "Math.PI");
+
+            const labels = [];
+            const dataPoints = [];
+
+            try {
+                const mathFunc = new Function('x', `return ${formula};`);
+                for (let x = -10; x <= 10; x += 0.2) {
+                    let y = mathFunc(x);
+                    if (isFinite(y)) {
+                        labels.push(x.toFixed(1));
+                        dataPoints.push(y);
+                    }
+                }
+            } catch (e) {
+                alert("Denklem formatı hatalı!"); return;
+            }
+
+            if (myChart) myChart.destroy();
+            const canvasCtx = document.getElementById('graphCanvas').getContext('2d');
+            myChart = new Chart(canvasCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: dataPoints,
+                        borderColor: '#00ff88',
+                        backgroundColor: 'rgba(0, 255, 136, 0.05)',
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#444' } },
+                        x: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#444', autoSkip: true, maxTicksLimit: 10 } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+        window.onload = draw;
+    </script>
+</body>
+</html>

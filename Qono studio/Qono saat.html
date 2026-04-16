@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qono World | Timezone Precision</title>
+    <style>
+        :root {
+            --bg: #000;
+            --glass: rgba(255, 255, 255, 0.02);
+            --border: rgba(255, 255, 255, 0.08);
+            --anim-speed: 0.4s; 
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body {
+            background: var(--bg);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            overflow: hidden;
+        }
+
+        .world-card {
+            background: var(--glass);
+            backdrop-filter: blur(50px);
+            border: 1px solid var(--border);
+            padding: 50px;
+            border-radius: 60px;
+            width: 700px;
+            text-align: center;
+            box-shadow: 0 40px 120px rgba(0,0,0,0.9);
+            z-index: 10;
+        }
+
+        .brand {
+            font-size: 0.7rem;
+            letter-spacing: 16px;
+            color: #222;
+            margin-bottom: 50px;
+            text-transform: uppercase;
+        }
+        .brand b { color: #555; font-weight: 800; }
+
+        .timezone-block {
+            margin-bottom: 40px;
+            padding-bottom: 40px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .timezone-block:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .city-label {
+            font-size: 0.6rem;
+            letter-spacing: 5px;
+            color: #444;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            font-weight: 800;
+        }
+
+        .display-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            height: 80px;
+        }
+
+        .segment {
+            width: 45px;
+            height: 70px;
+            overflow: hidden;
+            position: relative;
+            font-size: 4.5rem;
+            font-weight: 100;
+            line-height: 70px;
+        }
+
+        .segment-inner {
+            display: flex;
+            flex-direction: row;
+            width: 200%;
+            transition: transform var(--anim-speed) cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .segment-inner div { width: 50%; text-align: center; }
+
+        .separator {
+            font-size: 2.5rem;
+            font-weight: 100;
+            color: #151515;
+            margin-bottom: 5px;
+        }
+
+        /* Saniye için daha sönük stil */
+        .sec-group .segment {
+            width: 30px;
+            font-size: 2.5rem;
+            color: #333;
+            line-height: 85px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="world-card">
+        <div class="brand">QONO <b>WORLD</b></div>
+        
+        <div class="timezone-block">
+            <div class="city-label">Türkiye <span style="color:#600">●</span> TR</div>
+            <div class="display-container" id="tr-clock">
+                <div class="digit-group" style="display:flex;"><div class="segment"><div class="segment-inner" id="tr-h1"><div>0</div><div>0</div></div></div><div class="segment"><div class="segment-inner" id="tr-h2"><div>0</div><div>0</div></div></div></div>
+                <div class="separator">:</div>
+                <div class="digit-group" style="display:flex;"><div class="segment"><div class="segment-inner" id="tr-m1"><div>0</div><div>0</div></div></div><div class="segment"><div class="segment-inner" id="tr-m2"><div>0</div><div>0</div></div></div></div>
+                <div class="separator" style="opacity:0.3">.</div>
+                <div class="digit-group sec-group" style="display:flex;"><div class="segment"><div class="segment-inner" id="tr-s1"><div>0</div><div>0</div></div></div><div class="segment"><div class="segment-inner" id="tr-s2"><div>0</div><div>0</div></div></div></div>
+            </div>
+        </div>
+
+        <div class="timezone-block">
+            <div class="city-label">New York <span style="color:#004">●</span> USA</div>
+            <div class="display-container" id="ny-clock">
+                <div class="digit-group" style="display:flex;"><div class="segment"><div class="segment-inner" id="ny-h1"><div>0</div><div>0</div></div></div><div class="segment"><div class="segment-inner" id="ny-h2"><div>0</div><div>0</div></div></div></div>
+                <div class="separator">:</div>
+                <div class="digit-group" style="display:flex;"><div class="segment"><div class="segment-inner" id="ny-m1"><div>0</div><div>0</div></div></div><div class="segment"><div class="segment-inner" id="ny-m2"><div>0</div><div>0</div></div></div></div>
+                <div class="separator" style="opacity:0.3">.</div>
+                <div class="digit-group sec-group" style="display:flex;"><div class="segment"><div class="segment-inner" id="ny-s1"><div>0</div><div>0</div></div></div><div class="segment"><div class="segment-inner" id="ny-s2"><div>0</div><div>0</div></div></div></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let lastTR = "000000";
+        let lastNY = "000000";
+
+        function updateDigit(id, newVal, lastVal) {
+            if (newVal !== lastVal) {
+                const el = document.getElementById(id);
+                el.children[1].textContent = newVal;
+                el.style.transform = 'translateX(-50%)';
+                setTimeout(() => {
+                    el.style.transition = 'none';
+                    el.children[0].textContent = newVal;
+                    el.style.transform = 'translateX(0)';
+                    requestAnimationFrame(() => { el.style.transition = ''; });
+                }, 400);
+            }
+        }
+
+        function refreshTime() {
+            const now = new Date();
+
+            // TÜRKİYE (GMT+3)
+            const trStr = now.toLocaleTimeString('tr-TR', {timeZone: 'Europe/Istanbul', hour12: false}).replace(/:/g, '');
+            const trIds = ['tr-h1', 'tr-h2', 'tr-m1', 'tr-m2', 'tr-s1', 'tr-s2'];
+            trIds.forEach((id, i) => updateDigit(id, trStr[i], lastTR[i]));
+            lastTR = trStr;
+
+            // NEW YORK (GMT-4 veya -5 mevsime göre otomatik)
+            const nyStr = now.toLocaleTimeString('en-US', {timeZone: 'America/New_York', hour12: false}).replace(/:/g, '');
+            const nyIds = ['ny-h1', 'ny-h2', 'ny-m1', 'ny-m2', 'ny-s1', 'ny-s2'];
+            nyIds.forEach((id, i) => updateDigit(id, nyStr[i], lastNY[i]));
+            lastNY = nyStr;
+        }
+
+        setInterval(refreshTime, 1000);
+        refreshTime(); // İlk yükleme
+    </script>
+</body>
+</html>

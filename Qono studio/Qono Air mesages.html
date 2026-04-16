@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Qono Studio | DM & Group</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        :root { --bg: #050505; --glass: rgba(255, 255, 255, 0.02); --border: rgba(255, 255, 255, 0.08); --accent: #fff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg); height: 100vh; display: flex; justify-content: center; align-items: center; color: white; overflow: hidden; }
+
+        .app {
+            background: var(--glass); backdrop-filter: blur(60px); border: 1px solid var(--border);
+            border-radius: 40px; width: 95vw; height: 90vh; display: grid; grid-template-columns: 300px 1fr;
+            box-shadow: 0 50px 150px rgba(0,0,0,1);
+        }
+
+        /* SIDEBAR */
+        .sidebar { border-right: 1px solid var(--border); display: flex; flex-direction: column; background: rgba(0,0,0,0.2); }
+        .p-box { padding: 30px; border-bottom: 1px solid var(--border); }
+        .p-box input { background: transparent; border: none; color: #fff; font-size: 1.2rem; font-weight: 900; outline: none; width: 100%; }
+        
+        .list { flex-grow: 1; overflow-y: auto; padding: 15px; }
+        .tag { font-size: 0.55rem; letter-spacing: 3px; color: #444; margin: 15px 0 10px 10px; text-transform: uppercase; }
+        
+        .item { padding: 14px; border-radius: 18px; margin-bottom: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: 0.2s; border: 1px solid transparent; }
+        .item:hover { background: rgba(255,255,255,0.04); }
+        .item.active { background: #fff; color: #000; font-weight: 700; }
+        .avatar { width: 32px; height: 32px; border-radius: 10px; background: #111; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; }
+
+        /* MAIN */
+        .main { display: flex; flex-direction: column; }
+        .header { padding: 25px 40px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        
+        .msgs { flex-grow: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .m-line { max-width: 75%; padding: 12px 18px; border-radius: 20px; font-size: 0.85rem; line-height: 1.4; }
+        .m-line.me { align-self: flex-end; background: #fff; color: #000; border-bottom-right-radius: 4px; }
+        .m-line.them { align-self: flex-start; background: rgba(255,255,255,0.05); border-bottom-left-radius: 4px; }
+        
+        .invite-card { background: #111; border: 1px solid var(--border); padding: 15px; border-radius: 15px; margin-top: 10px; }
+        .invite-btn { background: #fff; color: #000; border: none; padding: 8px 15px; border-radius: 8px; font-size: 0.7rem; font-weight: 900; cursor: pointer; margin-top: 10px; }
+
+        .input-area { padding: 25px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
+        .input { flex-grow: 1; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 15px; padding: 0 20px; color: #fff; outline: none; }
+        .btn { background: #111; border: 1px solid var(--border); color: #fff; padding: 12px 20px; border-radius: 15px; cursor: pointer; font-size: 0.8rem; font-weight: 700; }
+        .btn-s { background: #fff; color: #000; }
+    </style>
+</head>
+<body>
+
+    <div class="app">
+        <div class="sidebar">
+            <div class="p-box">
+                <div style="font-size:0.5rem; letter-spacing:2px; color:#444; margin-bottom:5px;">PROFİLİN</div>
+                <input type="text" id="uName" value="Kullanıcı" onchange="save()">
+                <div id="myID" style="font-size:0.6rem; color:#00ff88; margin-top:5px; font-family:monospace;">ID: Bağlanıyor...</div>
+            </div>
+
+            <div class="list">
+                <div class="tag">Kişiler</div>
+                <div id="dmList"></div>
+                <div class="tag">Gruplar</div>
+                <div id="groupList"></div>
+            </div>
+
+            <div style="padding:20px;">
+                <button class="btn" style="width:100%" onclick="addPeer()">+ DM BAŞLAT</button>
+            </div>
+        </div>
+
+        <div class="main">
+            <div class="header">
+                <h3 id="cTitle">Hoş Geldin kanka</h3>
+                <div id="groupTools" style="display:none">
+                    <button class="btn" style="font-size:0.6rem" onclick="sendGroupInvite()">GRUP DAVETİ AT</button>
+                </div>
+            </div>
+            <div class="msgs" id="mArea"></div>
+            <div class="input-area">
+                <button class="btn" onclick="document.getElementById('fIn').click()">📎</button>
+                <input type="text" id="mIn" class="input" placeholder="Mesajını yaz...">
+                <button class="btn btn-s" onclick="send()">GÖNDER</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="fIn" style="display:none" onchange="upFile(this.files[0])">
+
+    <script>
+        let peer, conn, current = null;
+        let conns = {};
+        const ID = localStorage.getItem('q_id') || "FIX-" + Math.floor(1000+Math.random()*9000);
+        localStorage.setItem('q_id', ID);
+
+        let data = JSON.parse(localStorage.getItem('q_data')) || { dms: [], groups: [], logs: {} };
+
+        peer = new Peer(ID);
+        peer.on('open', id => document.getElementById('myID').innerText = "ID: " + id);
+        
+        // Birisi sana bağlandığında
+        peer.on('connection', c => {
+            setup(c);
+            if(!data.dms.includes(c.peer)) data.dms.push(c.peer);
+            save(); render();
+        });
+
+        function setup(c) {
+            conns[c.peer] = c;
+            c.on('data', d => {
+                if(d.type === 'invite') {
+                    if(!data.groups.includes(d.gid)) {
+                        const ok = confirm(c.peer + " seni " + d.gid + " grubuna davet etti. Katılmak ister misin?");
+                        if(ok) {
+                            data.groups.push(d.gid);
+                            save(); render();
+                        }
+                    }
+                } else {
+                    d.origin = 'them';
+                    push(c.peer, d);
+                }
+            });
+        }
+
+        function addPeer() {
+            const p = prompt("Bağlanılacak FIX ID:");
+            if(!p || p === ID) return;
+            const c = peer.connect(p);
+            setup(c);
+            if(!data.dms.includes(p)) data.dms.push(p);
+            save(); render(); select(p);
+        }
+
+        function send() {
+            const val = document.getElementById('mIn').value;
+            if(!val || !current) return;
+            const msg = { type: 'text', user: document.getElementById('uName').value, content: val, origin: 'me' };
+            if(conns[current]) conns[current].send(msg);
+            push(current, msg);
+            document.getElementById('mIn').value = "";
+        }
+
+        function sendGroupInvite() {
+            const gid = prompt("Davet edilecek Grup ID (Örn: GROUP-123):", "GROUP-" + Math.floor(1000+Math.random()*9000));
+            if(!gid) return;
+            if(conns[current]) conns[current].send({ type: 'invite', gid: gid });
+            alert("Davet " + current + " kişisine gönderildi!");
+        }
+
+        function push(id, obj) {
+            if(!data.logs[id]) data.logs[id] = [];
+            data.logs[id].push(obj);
+            save();
+            if(current === id) renderMsgs();
+        }
+
+        function render() {
+            document.getElementById('dmList').innerHTML = data.dms.map(id => `
+                <div class="item ${current === id ? 'active' : ''}" onclick="select('${id}')">
+                    <div class="avatar">U</div><div>${id}</div>
+                </div>`).join('');
+            
+            document.getElementById('groupList').innerHTML = data.groups.map(id => `
+                <div class="item ${current === id ? 'active' : ''}" onclick="select('${id}')">
+                    <div class="avatar" style="background:#fff; color:#000">G</div><div>${id}</div>
+                </div>`).join('');
+        }
+
+        function select(id) {
+            current = id;
+            document.getElementById('cTitle').innerText = id;
+            document.getElementById('groupTools').style.display = id.startsWith('FIX') ? 'block' : 'none';
+            if(!conns[id] && id.startsWith('FIX')) {
+                const c = peer.connect(id);
+                setup(c);
+            }
+            render(); renderMsgs();
+        }
+
+        function renderMsgs() {
+            const area = document.getElementById('mArea');
+            area.innerHTML = (data.logs[current] || []).map(m => `
+                <div class="m-line ${m.origin}">
+                    <div style="font-size:0.5rem; opacity:0.4; margin-bottom:4px;">${m.user}</div>
+                    ${m.type === 'text' ? m.content : `<img src="${m.content}" style="max-width:100%; border-radius:10px;">`}
+                </div>`).join('');
+            area.scrollTop = area.scrollHeight;
+        }
+
+        function upFile(file) {
+            if(!file || !current) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                const msg = { type: 'img', user: document.getElementById('uName').value, content: reader.result, origin: 'me' };
+                if(conns[current]) conns[current].send(msg);
+                push(current, msg);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function save() {
+            localStorage.setItem('q_data', JSON.stringify(data));
+            localStorage.setItem('q_name', document.getElementById('uName').value);
+        }
+
+        document.getElementById('uName').value = localStorage.getItem('q_name') || "User";
+        render();
+    </script>
+</body>
+</html>

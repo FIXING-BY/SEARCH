@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qono Level | Su Terazisi</title>
+    <style>
+        :root { --bg: #050505; --glass: rgba(255, 255, 255, 0.03); --border: rgba(255, 255, 255, 0.08); --accent: #00ff88; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg); height: 100vh; display: flex; justify-content: center; align-items: center; color: white; overflow: hidden; }
+
+        .app {
+            background: var(--glass); backdrop-filter: blur(50px); border: 1px solid var(--border);
+            border-radius: 40px; width: 350px; height: 600px; display: flex; flex-direction: column;
+            align-items: center; justify-content: space-around; padding: 40px;
+            box-shadow: 0 50px 100px rgba(0,0,0,1);
+        }
+
+        .header { text-align: center; }
+        .header h1 { font-size: 1.2rem; font-weight: 900; letter-spacing: 2px; }
+        .header p { font-size: 0.6rem; color: #444; margin-top: 5px; text-transform: uppercase; }
+
+        /* TERAZİ ALANI */
+        .level-container {
+            position: relative; width: 250px; height: 250px;
+            border: 2px solid var(--border); border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            background: radial-gradient(circle, rgba(255,255,255,0.02) 0%, transparent 70%);
+        }
+
+        /* HEDEF ÇİZGİLERİ */
+        .crosshair {
+            position: absolute; width: 100%; height: 100%;
+            border-radius: 50%;
+        }
+        .crosshair::before, .crosshair::after {
+            content: ''; position: absolute; background: var(--border);
+        }
+        .crosshair::before { width: 100%; height: 1px; top: 50%; }
+        .crosshair::after { width: 1px; height: 100%; left: 50%; }
+
+        .center-circle {
+            position: absolute; width: 60px; height: 60px;
+            border: 1px solid var(--accent); border-radius: 50%;
+            opacity: 0.3;
+        }
+
+        /* KABARCIK */
+        .bubble {
+            position: absolute; width: 40px; height: 40px;
+            background: var(--accent); border-radius: 50%;
+            box-shadow: 0 0 30px var(--accent);
+            transition: 0.1s ease-out;
+            z-index: 5;
+        }
+
+        .data { text-align: center; }
+        .angle { font-size: 3rem; font-weight: 900; color: #fff; }
+        .coords { font-size: 0.7rem; color: #555; margin-top: 10px; font-family: monospace; }
+
+        .btn {
+            background: #fff; color: #000; padding: 15px 30px; border-radius: 15px;
+            font-size: 0.7rem; font-weight: 800; border: none; cursor: pointer;
+            text-transform: uppercase; transition: 0.3s;
+        }
+        .btn:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+
+    <div class="app">
+        <div class="header">
+            <h1>QONO PRECISION</h1>
+            <p>X-Y Axis Leveler</p>
+        </div>
+
+        <div class="level-container">
+            <div class="crosshair"></div>
+            <div class="center-circle"></div>
+            <div id="bubble" class="bubble"></div>
+        </div>
+
+        <div class="data">
+            <div id="mainAngle" class="angle">0°</div>
+            <div id="coords" class="coords">X: 0.0 | Y: 0.0</div>
+        </div>
+
+        <button class="btn" onclick="requestPermission()">Sensörü Başlat</button>
+    </div>
+
+    <script>
+        const bubble = document.getElementById('bubble');
+        const mainAngle = document.getElementById('mainAngle');
+        const coordsDisplay = document.getElementById('coords');
+
+        function requestPermission() {
+            // iOS 13+ cihazlar için izin gerekli
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            window.addEventListener('deviceorientation', handleOrientation);
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                // Android ve diğerleri için direkt başlat
+                window.addEventListener('deviceorientation', handleOrientation);
+            }
+        }
+
+        function handleOrientation(event) {
+            let x = event.beta;  // -180 to 180 (Öne/Arkaya eğim)
+            let y = event.gamma; // -90 to 90 (Sağa/Sola eğim)
+
+            // Limitleri belirle (Taşmasın diye)
+            if (x > 45) x = 45;
+            if (x < -45) x = -45;
+            if (y > 45) y = 45;
+            if (y < -45) y = -45;
+
+            // Kabarcık pozisyonunu hesapla (Konteyner 250px, Bubble 40px)
+            // Merkez 125px, max kayma 100px olsun
+            const moveX = (y / 45) * 100;
+            const moveY = (x / 45) * 100;
+
+            bubble.style.transform = `translate(${moveX}px, ${moveY}px)`;
+
+            // Dereceyi hesapla
+            const totalTilt = Math.sqrt(x*x + y*y).toFixed(1);
+            mainAngle.innerText = totalTilt + "°";
+            
+            // Hassas veriyi yazdır
+            coordsDisplay.innerText = `X: ${y.toFixed(1)} | Y: ${x.toFixed(1)}`;
+
+            // Eğer tam düzse (0.5 derece tolerans) neon efekti parlasın
+            if (totalTilt < 1.0) {
+                bubble.style.background = "#fff";
+                bubble.style.boxShadow = "0 0 50px #fff";
+            } else {
+                bubble.style.background = "var(--accent)";
+                bubble.style.boxShadow = "0 0 30px var(--accent)";
+            }
+        }
+    </script>
+</body>
+</html>

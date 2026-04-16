@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qono Metronome | Pulse Engine</title>
+    <style>
+        :root {
+            --bg: #000;
+            --glass: rgba(255, 255, 255, 0.02);
+            --border: rgba(255, 255, 255, 0.08);
+            --accent: #fff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body {
+            background: var(--bg);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            overflow: hidden;
+        }
+
+        /* VURUŞ EFEKTİ (ARKAPLAN PARLAMASI) */
+        .pulse-overlay {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.1s;
+            pointer-events: none;
+        }
+
+        .metro-card {
+            background: var(--glass);
+            backdrop-filter: blur(50px);
+            border: 1px solid var(--border);
+            padding: 60px 40px;
+            border-radius: 60px;
+            width: 450px;
+            text-align: center;
+            box-shadow: 0 40px 120px rgba(0,0,0,0.9);
+            z-index: 10;
+        }
+
+        .brand {
+            font-size: 0.65rem;
+            letter-spacing: 14px;
+            color: #222;
+            margin-bottom: 50px;
+            text-transform: uppercase;
+        }
+        .brand b { color: #fff; font-weight: 800; }
+
+        /* BPM EKRANI */
+        .bpm-display {
+            display: flex;
+            justify-content: center;
+            align-items: baseline;
+            gap: 10px;
+            margin-bottom: 40px;
+            height: 100px;
+        }
+
+        .segment {
+            width: 60px;
+            height: 100px;
+            overflow: hidden;
+            position: relative;
+            font-size: 6rem;
+            font-weight: 100;
+            line-height: 100px;
+        }
+
+        .segment-inner {
+            display: flex;
+            flex-direction: row;
+            width: 200%;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .segment-inner div { width: 50%; text-align: center; }
+
+        .unit { font-size: 1rem; color: #444; letter-spacing: 4px; font-weight: 800; }
+
+        /* KONTROLLER */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            align-items: center;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            -webkit-appearance: none;
+            background: transparent;
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+            background: rgba(255,255,255,0.05);
+            height: 4px;
+            border-radius: 2px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 0 0 15px rgba(255,255,255,0.5);
+        }
+
+        .btn-play {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: #fff;
+            color: #000;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn-play:active { transform: scale(0.9); }
+        .playing { background: transparent; color: #fff; border-color: #fff; }
+
+        .visual-dots {
+            display: flex;
+            gap: 15px;
+            margin-top: 40px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #111;
+            transition: 0.1s;
+        }
+
+        .dot.active { background: #fff; box-shadow: 0 0 15px #fff; transform: scale(1.3); }
+
+    </style>
+</head>
+<body>
+
+    <div class="pulse-overlay" id="pulseOverlay"></div>
+
+    <div class="metro-card" id="card">
+        <div class="brand">QONO <b>PULSE</b></div>
+        
+        <div class="bpm-display">
+            <div class="segment"><div class="segment-inner" id="d1"><div>1</div><div>1</div></div></div>
+            <div class="segment"><div class="segment-inner" id="d2"><div>2</div><div>2</div></div></div>
+            <div class="segment"><div class="segment-inner" id="d3"><div>0</div><div>0</div></div></div>
+            <span class="unit">BPM</span>
+        </div>
+
+        <div class="controls">
+            <input type="range" id="bpmSlider" min="40" max="240" value="120">
+            
+            <button class="btn-play" id="playBtn">▶</button>
+        </div>
+
+        <center>
+            <div class="visual-dots">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+        </center>
+    </div>
+
+    <script>
+        const playBtn = document.getElementById('playBtn');
+        const slider = document.getElementById('bpmSlider');
+        const overlay = document.getElementById('pulseOverlay');
+        const dots = document.querySelectorAll('.dot');
+        const card = document.getElementById('card');
+
+        let isPlaying = false;
+        let bpm = 120;
+        let timer = null;
+        let currentDot = 0;
+        let lastBpmStr = "120";
+
+        // Ses Motoru (Web Audio API)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playClick() {
+            const osc = audioCtx.createOscillator();
+            const envelope = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(currentDot === 0 ? 1000 : 800, audioCtx.currentTime); // İlk vuruş daha tiz
+
+            envelope.gain.setValueAtTime(1, audioCtx.currentTime);
+            envelope.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+
+            osc.connect(envelope);
+            envelope.connect(audioCtx.destination);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+
+            // Görsel Efektler
+            overlay.style.opacity = '1';
+            setTimeout(() => overlay.style.opacity = '0', 50);
+
+            dots.forEach(d => d.classList.remove('active'));
+            dots[currentDot].classList.add('active');
+
+            currentDot = (currentDot + 1) % 4;
+        }
+
+        function updateDigits(val) {
+            const currentStr = String(val).padStart(3, '0');
+            const ids = ['d1', 'd2', 'd3'];
+
+            ids.forEach((id, i) => {
+                const el = document.getElementById(id);
+                if (currentStr[i] !== lastBpmStr[i]) {
+                    el.children[1].textContent = currentStr[i];
+                    el.style.transform = 'translateX(-50%)';
+                    setTimeout(() => {
+                        el.style.transition = 'none';
+                        el.children[0].textContent = currentStr[i];
+                        el.style.transform = 'translateX(0)';
+                        requestAnimationFrame(() => { el.style.transition = ''; });
+                    }, 300);
+                }
+            });
+            lastBpmStr = currentStr;
+        }
+
+        function startMetronome() {
+            const interval = 60000 / bpm;
+            timer = setInterval(playClick, interval);
+        }
+
+        playBtn.onclick = () => {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            isPlaying = !isPlaying;
+            if (isPlaying) {
+                playBtn.innerHTML = "■";
+                playBtn.classList.add('playing');
+                currentDot = 0;
+                playClick();
+                startMetronome();
+            } else {
+                playBtn.innerHTML = "▶";
+                playBtn.classList.remove('playing');
+                clearInterval(timer);
+                dots.forEach(d => d.classList.remove('active'));
+            }
+        };
+
+        slider.oninput = (e) => {
+            bpm = e.target.value;
+            updateDigits(bpm);
+            if (isPlaying) {
+                clearInterval(timer);
+                startMetronome();
+            }
+        };
+
+        // Başlangıç ayarı
+        updateDigits(120);
+    </script>
+</body>
+</html>

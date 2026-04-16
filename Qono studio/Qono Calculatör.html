@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qono Calc | Minimalist Precision</title>
+    <style>
+        :root {
+            --bg: #000;
+            --glass: rgba(255, 255, 255, 0.02);
+            --border: rgba(255, 255, 255, 0.08);
+            --accent: #fff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body {
+            background: var(--bg);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            overflow: hidden;
+        }
+
+        .calc-card {
+            background: var(--glass);
+            backdrop-filter: blur(50px);
+            border: 1px solid var(--border);
+            padding: 40px;
+            border-radius: 60px;
+            width: 400px;
+            box-shadow: 0 40px 120px rgba(0,0,0,0.9);
+            z-index: 10;
+        }
+
+        .brand {
+            font-size: 0.6rem;
+            letter-spacing: 12px;
+            color: #333;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            text-align: center;
+        }
+        .brand b { color: #fff; font-weight: 800; }
+
+        /* EKRAN ALANI */
+        .display {
+            text-align: right;
+            margin-bottom: 30px;
+            padding: 20px;
+            height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            word-wrap: break-word;
+            word-break: break-all;
+        }
+
+        .history {
+            font-size: 0.9rem;
+            color: #444;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+
+        .current {
+            font-size: 3.5rem;
+            font-weight: 100;
+            color: #fff;
+            line-height: 1;
+        }
+
+        /* TUŞ TAKIMI */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        button {
+            aspect-ratio: 1;
+            border-radius: 22px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.01);
+            color: #888;
+            font-size: 1.2rem;
+            font-weight: 300;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        button:active {
+            transform: scale(0.9);
+            background: #fff;
+            color: #000;
+        }
+
+        .op-btn { color: #fff; font-weight: 600; }
+        .clear-btn { color: #ff4444; }
+        .equal-btn {
+            background: #fff;
+            color: #000;
+            font-weight: 900;
+            grid-column: span 2;
+            aspect-ratio: auto;
+        }
+        .equal-btn:hover { background: #eee; color: #000; }
+
+    </style>
+</head>
+<body>
+
+    <div class="calc-card" id="card">
+        <div class="brand">QONO <b>CALC</b></div>
+        
+        <div class="display">
+            <div class="history" id="history"></div>
+            <div class="current" id="current">0</div>
+        </div>
+
+        <div class="grid">
+            <button class="clear-btn" onclick="clearDisplay()">C</button>
+            <button class="op-btn" onclick="appendOp('/')">/</button>
+            <button class="op-btn" onclick="appendOp('*')">×</button>
+            <button onclick="deleteLast()">⌫</button>
+
+            <button onclick="appendNum('7')">7</button>
+            <button onclick="appendNum('8')">8</button>
+            <button onclick="appendNum('9')">9</button>
+            <button class="op-btn" onclick="appendOp('-')">-</button>
+
+            <button onclick="appendNum('4')">4</button>
+            <button onclick="appendNum('5')">5</button>
+            <button onclick="appendNum('6')">6</button>
+            <button class="op-btn" onclick="appendOp('+')">+</button>
+
+            <button onclick="appendNum('1')">1</button>
+            <button onclick="appendNum('2')">2</button>
+            <button onclick="appendNum('3')">3</button>
+            <button onclick="appendNum('.')">.</button>
+
+            <button onclick="appendNum('0')">0</button>
+            <button class="equal-btn" onclick="calculate()">=</button>
+        </div>
+    </div>
+
+    <script>
+        const currentEl = document.getElementById('current');
+        const historyEl = document.getElementById('history');
+        let currentInput = '0';
+        let history = '';
+        let shouldReset = false;
+
+        function updateDisplay() {
+            currentEl.textContent = currentInput;
+            historyEl.textContent = history;
+        }
+
+        function appendNum(num) {
+            if (currentInput === '0' || shouldReset) {
+                currentInput = num;
+                shouldReset = false;
+            } else {
+                if (num === '.' && currentInput.includes('.')) return;
+                currentInput += num;
+            }
+            updateDisplay();
+        }
+
+        function appendOp(op) {
+            if (shouldReset) shouldReset = false;
+            history = currentInput + ' ' + op;
+            shouldReset = true;
+            updateDisplay();
+        }
+
+        function clearDisplay() {
+            currentInput = '0';
+            history = '';
+            updateDisplay();
+        }
+
+        function deleteLast() {
+            if (currentInput.length > 1) {
+                currentInput = currentInput.slice(0, -1);
+            } else {
+                currentInput = '0';
+            }
+            updateDisplay();
+        }
+
+        function calculate() {
+            if (!history) return;
+            
+            try {
+                const expression = history + ' ' + currentInput;
+                // Eval yerine daha güvenli bir yöntem ama basitlik için eval (Kendi testimiz)
+                const result = eval(expression.replace('×', '*').replace('÷', '/'));
+                
+                history = expression + ' =';
+                currentInput = Number.isInteger(result) ? result.toString() : result.toFixed(2);
+                shouldReset = true;
+                updateDisplay();
+
+                // Başarı animasyonu
+                document.getElementById('card').animate([
+                    { transform: 'scale(1)' }, { transform: 'scale(1.03)' }, { transform: 'scale(1)' }
+                ], { duration: 200 });
+
+            } catch (e) {
+                currentInput = 'Error';
+                updateDisplay();
+            }
+        }
+
+        // Klavye desteği
+        document.addEventListener('keydown', (e) => {
+            if (e.key >= 0 && e.key <= 9) appendNum(e.key);
+            if (e.key === '+') appendOp('+');
+            if (e.key === '-') appendOp('-');
+            if (e.key === '*') appendOp('*');
+            if (e.key === '/') appendOp('/');
+            if (e.key === 'Enter' || e.key === '=') calculate();
+            if (e.key === 'Escape') clearDisplay();
+            if (e.key === 'Backspace') deleteLast();
+        });
+    </script>
+</body>
+</html>

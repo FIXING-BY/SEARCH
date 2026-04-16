@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qono Code | Sticky Studio</title>
+    <style>
+        :root {
+            --bg: #000;
+            --glass: rgba(255, 255, 255, 0.02);
+            --border: rgba(255, 255, 255, 0.08);
+            --accent: #fff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body {
+            background: var(--bg);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            overflow: hidden; /* Dış scroll kapalı */
+        }
+
+        .studio-card {
+            background: var(--glass);
+            backdrop-filter: blur(60px);
+            border: 1px solid var(--border);
+            border-radius: 40px;
+            width: 95vw;
+            height: 90vh;
+            display: flex;
+            flex-direction: column; /* Dikey dizilim */
+            box-shadow: 0 50px 150px rgba(0,0,0,1);
+            overflow: hidden;
+        }
+
+        /* SABİT ÜST BAR (STICKY HEADER) */
+        .header {
+            height: 80px;
+            min-height: 80px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(10, 10, 10, 0.8); /* Hafif karartılmış cam */
+            backdrop-filter: blur(20px);
+            z-index: 100;
+        }
+
+        .brand { font-size: 0.7rem; letter-spacing: 12px; color: #222; text-transform: uppercase; }
+        .brand b { color: #fff; }
+
+        .btn {
+            padding: 12px 25px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: #555;
+            font-size: 0.65rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: 0.2s;
+            letter-spacing: 2px;
+        }
+
+        .btn-launch {
+            background: #fff;
+            color: #000;
+            border-color: #fff;
+            box-shadow: 0 0 25px rgba(255,255,255,0.1);
+        }
+
+        .btn:hover { border-color: #fff; color: #fff; transform: translateY(-1px); }
+        .btn-launch:hover { background: #ccc; color: #000; }
+
+        /* EDİTÖR ALANI (KENDİ İÇİNDE SCROLL) */
+        .main-editor {
+            flex-grow: 1;
+            display: flex;
+            overflow-y: auto; /* Kod çoksa sadece burası kayar */
+            background: #000;
+        }
+
+        .line-numbers {
+            width: 60px;
+            padding: 30px 0;
+            text-align: center;
+            background: rgba(255,255,255,0.01);
+            color: #1a1a1a;
+            font-size: 0.8rem;
+            font-family: monospace;
+            border-right: 1px solid var(--border);
+            user-select: none;
+        }
+
+        textarea {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            color: #999;
+            padding: 30px;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 1.05rem;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+            tab-size: 4;
+        }
+
+        /* SCROLLBAR TASARIMI */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #222; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
+
+    </style>
+</head>
+<body>
+
+    <div class="studio-card">
+        <header class="header">
+            <div class="brand">QONO <b>HTML STUDİO</b></div>
+            <div style="display: flex; gap: 15px;">
+                <button class="btn" onclick="copyCode()">Copy</button>
+                <button class="btn btn-launch" onclick="launch()">Launch Project</button>
+            </div>
+        </header>
+
+        <div class="main-editor">
+            <div class="line-numbers" id="ln">1</div>
+            <textarea id="editor" spellcheck="false" placeholder="Kodlarını buraya gir..."></textarea>
+        </div>
+    </div>
+
+    <script>
+        const editor = document.getElementById('editor');
+        const ln = document.getElementById('ln');
+
+        // Satır numaralarını senkronize et
+        editor.addEventListener('input', () => {
+            const count = editor.value.split('\n').length;
+            let nums = "";
+            for(let i=1; i<=count; i++) nums += i + "<br>";
+            ln.innerHTML = nums;
+        });
+
+        // Tab tuşu (4 boşluk)
+        editor.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                editor.value = editor.value.substring(0, start) + "    " + editor.value.substring(end);
+                editor.selectionStart = editor.selectionEnd = start + 4;
+            }
+        });
+
+        // Yeni sayfada fırlat
+        function launch() {
+            const code = editor.value;
+            if(!code.trim()) return alert("Önce bir şeyler yaz kanka!");
+            const blob = new Blob([code], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+        }
+
+        function copyCode() {
+            navigator.clipboard.writeText(editor.value);
+            alert("Kod kopyalandı!");
+        }
+
+        // Örnek başlangıç kodu
+        editor.value = `<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { background: #000; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .box { padding: 40px; border: 1px solid #fff; font-family: sans-serif; letter-spacing: 5px; }
+    </style>
+</head>
+<body>
+    <div class="box">HELLO QONO</div>
+</body>
+</html>`;
+        editor.dispatchEvent(new Event('input'));
+    </script>
+</body>
+</html>

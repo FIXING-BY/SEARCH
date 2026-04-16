@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qono Timer | Tactile Elite</title>
+    <style>
+        :root {
+            --bg: #000;
+            --glass: rgba(255, 255, 255, 0.02);
+            --border: rgba(255, 255, 255, 0.08);
+            --anim-speed: 0.4s; 
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body {
+            background: var(--bg);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* AKIŞ EFEKTİ */
+        .flow-layer {
+            position: absolute;
+            top: 0; left: -150%;
+            width: 300%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent 0%, #000 20%, #fff 50%, #000 80%, transparent 100%);
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        .active-flow {
+            animation: flowMove 0.18s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            opacity: 1;
+        }
+
+        @keyframes flowMove {
+            0% { left: -150%; transform: skewX(-20deg); }
+            100% { left: 100%; transform: skewX(-20deg); }
+        }
+
+        .timer-card {
+            background: var(--glass);
+            backdrop-filter: blur(50px);
+            border: 1px solid var(--border);
+            padding: 60px 50px;
+            border-radius: 60px;
+            width: 540px;
+            text-align: center;
+            box-shadow: 0 40px 120px rgba(0,0,0,0.9);
+            z-index: 10;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+        }
+
+        /* Kart Tıklama Efekti */
+        .timer-card:active { transform: scale(0.98); }
+
+        .brand {
+            font-size: 0.8rem;
+            letter-spacing: 16px;
+            color: #333;
+            margin-bottom: 60px;
+            text-transform: uppercase;
+            font-weight: 200;
+        }
+        .brand b { color: #fff; font-weight: 800; }
+
+        .display-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 50px;
+            height: 110px;
+        }
+
+        .segment {
+            width: 60px;
+            height: 100px;
+            overflow: hidden;
+            position: relative;
+            font-size: 6.5rem;
+            font-weight: 100;
+            line-height: 100px;
+        }
+
+        .segment-inner {
+            display: flex;
+            flex-direction: row;
+            width: 200%;
+            height: 100%;
+            /* Blur kaldırıldı, net yaylanma eklendi */
+            transition: transform var(--anim-speed) cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .segment-inner div { 
+            width: 50%; 
+            text-align: center;
+        }
+
+        .separator {
+            font-size: 4rem;
+            font-weight: 100;
+            color: #1a1a1a;
+            margin-bottom: 15px;
+        }
+
+        .input-area {
+            transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 150px;
+            opacity: 1;
+        }
+
+        .input-area.hidden {
+            max-height: 0;
+            opacity: 0;
+            transform: translateY(20px);
+            pointer-events: none;
+        }
+
+        .input-group {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            margin-bottom: 50px;
+        }
+
+        input {
+            width: 85px; height: 65px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            color: #fff;
+            text-align: center;
+            font-size: 1.5rem;
+            transition: 0.3s;
+        }
+
+        input:focus { outline: none; border-color: #fff; background: rgba(255,255,255,0.05); }
+
+        .label { display: block; font-size: 0.6rem; color: #222; margin-top: 12px; letter-spacing: 4px; font-weight: 800; }
+
+        .controls { display: grid; grid-template-columns: 2.2fr 1fr; gap: 20px; }
+
+        button {
+            padding: 24px; border-radius: 28px; border: none; cursor: pointer;
+            font-weight: 900; text-transform: uppercase; letter-spacing: 4px; 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Buton Tıklama Animasyonu */
+        button:active { transform: scale(0.92); }
+
+        .btn-start { background: #fff; color: #000; }
+        .btn-reset { background: transparent; color: #444; border: 1px solid var(--border); }
+        .btn-reset:hover { color: #fff; border-color: #fff; }
+
+        .card-bump { transform: scale(1.04); }
+
+    </style>
+</head>
+<body>
+
+    <div class="flow-layer" id="flow"></div>
+
+    <div class="timer-card" id="card">
+        <div class="brand">QONO <b>TIMER</b></div>
+        
+        <div class="display-container" id="display">
+            <div class="digit-group" style="display:flex;">
+                <div class="segment"><div class="segment-inner" id="h1"><div>0</div><div>0</div></div></div>
+                <div class="segment"><div class="segment-inner" id="h2"><div>0</div><div>0</div></div></div>
+            </div>
+            <div class="separator">:</div>
+            <div class="digit-group" style="display:flex;">
+                <div class="segment"><div class="segment-inner" id="m1"><div>0</div><div>0</div></div></div>
+                <div class="segment"><div class="segment-inner" id="m2"><div>0</div><div>0</div></div></div>
+            </div>
+            <div class="separator">:</div>
+            <div class="digit-group" style="display:flex;">
+                <div class="segment"><div class="segment-inner" id="s1"><div>0</div><div>0</div></div></div>
+                <div class="segment"><div class="segment-inner" id="s2"><div>0</div><div>0</div></div></div>
+            </div>
+        </div>
+
+        <div class="input-area" id="inputArea">
+            <div class="input-group">
+                <div class="input-box"><input type="number" id="inH" placeholder="00"><span class="label">HOUR</span></div>
+                <div class="input-box"><input type="number" id="inM" placeholder="00"><span class="label">MIN</span></div>
+                <div class="input-box"><input type="number" id="inS" placeholder="00"><span class="label">SEC</span></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-start" id="startBtn">START</button>
+            <button class="btn-reset" id="resetBtn">RESET</button>
+        </div>
+    </div>
+
+    <script>
+        let timer;
+        let timeRemaining = 0;
+        let isRunning = false;
+        let lastStr = "000000";
+        const ANIM_MS = 400;
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const flowLayer = document.getElementById('flow');
+        const card = document.getElementById('card');
+        const inputArea = document.getElementById('inputArea');
+
+        function playBeep(startTime) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1100, startTime);
+            gain.gain.setValueAtTime(0.12, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.1);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(startTime);
+            osc.stop(startTime + 0.12);
+
+            const delay = (startTime - audioCtx.currentTime) * 1000;
+            setTimeout(() => {
+                flowLayer.classList.remove('active-flow');
+                void flowLayer.offsetWidth; 
+                flowLayer.classList.add('active-flow');
+                card.classList.add('card-bump');
+                setTimeout(() => card.classList.remove('card-bump'), 150);
+            }, delay);
+        }
+
+        function triggerTripleBeep() {
+            const now = audioCtx.currentTime;
+            for(let i=0; i<3; i++) {
+                const groupStart = now + (i * 0.5);
+                playBeep(groupStart);
+                playBeep(groupStart + 0.1);
+                playBeep(groupStart + 0.2);
+            }
+            setTimeout(() => {
+                inputArea.classList.remove('hidden');
+                document.getElementById('startBtn').textContent = "START";
+            }, 1800);
+        }
+
+        function updateDisplay(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            const currentStr = String(h).padStart(2,'0') + String(m).padStart(2,'0') + String(s).padStart(2,'0');
+            const ids = ['h1', 'h2', 'm1', 'm2', 's1', 's2'];
+            
+            ids.forEach((id, i) => {
+                const el = document.getElementById(id);
+                if (currentStr[i] !== lastStr[i]) {
+                    el.children[1].textContent = currentStr[i];
+                    el.style.transform = 'translateX(-50%)';
+                    
+                    setTimeout(() => {
+                        el.style.transition = 'none';
+                        el.children[0].textContent = currentStr[i];
+                        el.style.transform = 'translateX(0)';
+                        requestAnimationFrame(() => { el.style.transition = ''; });
+                    }, ANIM_MS);
+                }
+            });
+            lastStr = currentStr;
+        }
+
+        document.getElementById('startBtn').onclick = function() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (isRunning) {
+                clearInterval(timer);
+                isRunning = false;
+                this.textContent = "RESUME";
+                return;
+            }
+            if (timeRemaining === 0) {
+                const h = parseInt(document.getElementById('inH').value) || 0;
+                const m = parseInt(document.getElementById('inM').value) || 0;
+                const s = parseInt(document.getElementById('inS').value) || 0;
+                timeRemaining = (h * 3600) + (m * 60) + s;
+                if (timeRemaining <= 0) return;
+                updateDisplay(timeRemaining);
+            }
+            isRunning = true;
+            this.textContent = "PAUSE";
+            inputArea.classList.add('hidden'); 
+            timer = setInterval(() => {
+                timeRemaining--;
+                updateDisplay(timeRemaining);
+                if (timeRemaining <= 0) {
+                    clearInterval(timer);
+                    isRunning = false;
+                    triggerTripleBeep();
+                }
+            }, 1000);
+        };
+
+        document.getElementById('resetBtn').onclick = function() {
+            clearInterval(timer);
+            isRunning = false;
+            timeRemaining = 0;
+            updateDisplay(0);
+            document.getElementById('startBtn').textContent = "START";
+            inputArea.classList.remove('hidden'); 
+            document.querySelectorAll('input').forEach(i => i.value = "");
+        };
+    </script>
+</body>
+</html>

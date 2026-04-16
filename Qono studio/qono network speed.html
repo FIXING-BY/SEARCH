@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qono Speed | Pro Engine</title>
+    <style>
+        :root {
+            --bg: #000;
+            --glass: rgba(255, 255, 255, 0.02);
+            --border: rgba(255, 255, 255, 0.08);
+            --anim-speed: 0.3s; 
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body {
+            background: var(--bg);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .flow-layer {
+            position: absolute;
+            top: 0; left: -150%;
+            width: 300%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent 0%, #000 20%, #fff 50%, #000 80%, transparent 100%);
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        .active-flow {
+            animation: flowMove 0.2s linear infinite;
+            opacity: 0.8;
+        }
+
+        @keyframes flowMove {
+            0% { left: -150%; }
+            100% { left: 100%; }
+        }
+
+        .speed-card {
+            background: var(--glass);
+            backdrop-filter: blur(50px);
+            border: 1px solid var(--border);
+            padding: 60px 50px;
+            border-radius: 60px;
+            width: 540px;
+            text-align: center;
+            box-shadow: 0 40px 120px rgba(0,0,0,0.9);
+            z-index: 10;
+        }
+
+        .brand {
+            font-size: 0.8rem;
+            letter-spacing: 16px;
+            color: #333;
+            margin-bottom: 60px;
+            text-transform: uppercase;
+        }
+        .brand b { color: #fff; font-weight: 800; }
+
+        .speed-value {
+            display: flex;
+            justify-content: center;
+            align-items: baseline;
+            gap: 10px;
+            margin-bottom: 50px;
+            height: 100px;
+        }
+
+        .segment {
+            width: 60px;
+            height: 100px;
+            overflow: hidden;
+            position: relative;
+            font-size: 6.5rem;
+            font-weight: 100;
+            line-height: 100px;
+        }
+
+        .segment-inner {
+            display: flex;
+            flex-direction: row;
+            width: 200%;
+            transition: transform var(--anim-speed) cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .segment-inner div { width: 50%; text-align: center; }
+
+        .unit { font-size: 1.2rem; color: #444; letter-spacing: 4px; font-weight: 800; }
+
+        .btn-start {
+            width: 100%;
+            padding: 24px;
+            border-radius: 28px;
+            border: none;
+            cursor: pointer;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            background: #fff;
+            color: #000;
+            transition: 0.3s;
+        }
+
+        .btn-start:disabled { opacity: 0.3; cursor: wait; }
+
+        .status-text {
+            font-size: 0.7rem;
+            color: #444;
+            margin-top: 20px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="flow-layer" id="flow"></div>
+
+    <div class="speed-card" id="card">
+        <div class="brand">QONO <b>SPEED</b></div>
+        
+        <div class="speed-value">
+            <div class="segment"><div class="segment-inner" id="d1"><div>0</div><div>0</div></div></div>
+            <div class="segment"><div class="segment-inner" id="d2"><div>0</div><div>0</div></div></div>
+            <div class="segment"><div class="segment-inner" id="d3"><div>0</div><div>0</div></div></div>
+            <span class="unit">MBPS</span>
+        </div>
+
+        <button class="btn-start" id="startBtn">START REAL TEST</button>
+        <div class="status-text" id="status">PRESS START FOR 10MB TEST</div>
+    </div>
+
+    <script>
+        const startBtn = document.getElementById('startBtn');
+        const flow = document.getElementById('flow');
+        const status = document.getElementById('status');
+        let lastStr = "000";
+
+        function updateDigits(val) {
+            let num = Math.floor(val);
+            if(num > 999) num = 999;
+            if(num < 0) num = 0;
+            const currentStr = String(num).padStart(3, '0');
+            const ids = ['d1', 'd2', 'd3'];
+
+            ids.forEach((id, i) => {
+                const el = document.getElementById(id);
+                if (currentStr[i] !== lastStr[i]) {
+                    el.children[1].textContent = currentStr[i];
+                    el.style.transform = 'translateX(-50%)';
+                    setTimeout(() => {
+                        el.style.transition = 'none';
+                        el.children[0].textContent = currentStr[i];
+                        el.style.transform = 'translateX(0)';
+                        requestAnimationFrame(() => { el.style.transition = ''; });
+                    }, 300);
+                }
+            });
+            lastStr = currentStr;
+        }
+
+        startBtn.onclick = async function() {
+            this.disabled = true;
+            this.textContent = "TESTING...";
+            status.textContent = "DOWNLOADING 10MB PAYLOAD...";
+            flow.classList.add('active-flow');
+
+            // CLOUDFLARE GÜVENLİ TEST DOSYASI (10MB)
+            // Not: Bu dosya gerçek hız ölçümü için ideal boyuttur.
+            const testUrl = "https://speed.cloudflare.com/__down?bytes=10000000"; 
+
+            try {
+                const startTime = performance.now();
+                const response = await fetch(testUrl, { cache: 'no-store' });
+                
+                if (!response.ok) throw new Error();
+
+                const reader = response.body.getReader();
+                let receivedLength = 0;
+
+                // Animasyon için rastgele rakamlar
+                let dummyInt = setInterval(() => {
+                    updateDigits(Math.random() * 50 + 20);
+                }, 150);
+
+                while(true) {
+                    const {done, value} = await reader.read();
+                    if (done) break;
+                    receivedLength += value.length;
+                    
+                    // İndirme devam ederken ara hesaplama (Opsiyonel: Canlı hız)
+                    let currentTime = performance.now();
+                    let duration = (currentTime - startTime) / 1000;
+                    if(duration > 0.1) {
+                        let currentMbps = (receivedLength * 8 / (1024 * 1024)) / duration;
+                        // updateDigits(currentMbps); // İstersen bunu açıp canlı izleyebilirsin
+                    }
+                }
+
+                const endTime = performance.now();
+                clearInterval(dummyInt);
+
+                const durationInSeconds = (endTime - startTime) / 1000;
+                const bitsLoaded = receivedLength * 8;
+                const speedMbps = (bitsLoaded / durationInSeconds) / (1024 * 1024);
+
+                updateDigits(speedMbps);
+                status.textContent = "TEST FINISHED";
+                
+            } catch (error) {
+                status.textContent = "ERROR: CLOUDFLARE TIMEOUT";
+                updateDigits(0);
+            }
+
+            flow.classList.remove('active-flow');
+            this.disabled = false;
+            this.textContent = "RUN AGAIN";
+            
+            document.getElementById('card').animate([
+                { transform: 'scale(1)' }, { transform: 'scale(1.05)' }, { transform: 'scale(1)' }
+            ], { duration: 300 });
+        };
+    </script>
+</body>
+</html>
