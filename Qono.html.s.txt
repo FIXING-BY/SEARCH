@@ -11,8 +11,8 @@ zen          | nefes klavuzu    | https://raw.githubusercontent.com/FIXING-BY/se
 crono meter  | krono metre      | https://raw.githubusercontent.com/FIXING-BY/search/refs/heads/main/Qono%20studio/Qono%20kronometre.html
 metronom     | metronom         | https://raw.githubusercontent.com/FIXING-BY/search/refs/heads/main/Qono%20studio/Qono%20metronom.html
 clock        | saat             | https://raw.githubusercontent.com/FIXING-BY/search/refs/heads/main/Qono%20studio/Qono%20saat.html
-             |       |
-             |       |
-             |       |
-             |       |    
+timmer       | zamanlayıcı      | https://raw.githubusercontent.com/FIXING-BY/search/refs/heads/main/Qono%20studio/Qono%20timmer.html
+whele        | çark             | https://raw.githubusercontent.com/FIXING-BY/search/refs/heads/main/Qono%20studio/Qono%20whele.html
+translate    | çeviri           | https://raw.githubusercontent.com/FIXING-BY/search/refs/heads/main/Qono%20studio/Qono%20%C3%A7eviri.html
+speed test   | network speed    | https://raw.githubusercontent.com/FIXING-BY/search/refs/heads/main/Qono%20studio/qono%20network%20speed.html   
    
