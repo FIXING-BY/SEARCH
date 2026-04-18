@@ -1,4 +1,5 @@
 Stack Overflow | https://stackoverflow.com | Programlama soruları ve cevapları sitesi
+Qonix | https://fixing-by.github.io/Qnix/ | Fixing in mesaj platformu dur
 Amazon | https://www.amazon.com | Dünya çapında en büyük e-ticaret platformu, geniş ürün yelpazesi ve hızlı teslimat hizmetiyle online alışverişte lider konumda.
 BBC News | https://www.bbc.com/news | Global news coverage with in‑depth reporting and analysis.
 nexsus | https://fixing-by.github.io/Nexsus/ | Nexsus e ticaret sitesi
