@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loading...</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Segoe UI',sans-serif;overflow:hidden}
+#qono-loader{position:fixed;inset:0;background:#000;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
+.q-logo{position:relative;width:64px;height:64px}
+.q-logo svg{width:64px;height:64px;opacity:.9}
+.q-bar{width:220px;height:3px;background:#111;border-radius:2px;overflow:hidden}
+.q-fill{height:100%;width:0%;background:linear-gradient(90deg,#1a1a1a,#444,#1a1a1a);background-size:200% 100%;animation:shimmer 1.2s infinite;border-radius:2px;transition:width .3s}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.q-text{color:#333;font-size:11px;letter-spacing:3px;text-transform:uppercase}
+.q-err{color:#ff4444;font-size:12px;display:none;text-align:center;max-width:280px;line-height:1.6}
+#qono-frame{display:none;position:fixed;inset:0;width:100%;height:100%;border:none;background:#fff}
+#qono-badge{position:fixed;bottom:14px;right:14px;z-index:99999;display:flex;align-items:center;gap:5px;opacity:0;pointer-events:none;transition:opacity .5s}
+#qono-badge.visible{opacity:1;pointer-events:auto}
+#qono-badge:hover{opacity:1!important}
+#qono-badge svg{display:block}
+</style>
+</head>
+<body>
+<div id="qono-loader">
+  <div class="q-logo">
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <!-- Kilit gövdesi -->
+      <rect x="14" y="28" width="36" height="26" rx="5" fill="none" stroke="#333" stroke-width="1.8"/>
+      <!-- Kilit üst yay -->
+      <path d="M20 28V22a12 12 0 0 1 24 0v6" fill="none" stroke="#333" stroke-width="1.8" stroke-linecap="round"/>
+      <!-- Kilit deliği -->
+      <circle cx="32" cy="40" r="3.5" fill="#333"/>
+      <rect x="30.5" y="41" width="3" height="5" rx="1" fill="#333"/>
+      <!-- V4 yazısı içinde -->
+      <text x="32" y="58" text-anchor="middle" font-size="6" font-family="monospace" fill="#2a2a2a" letter-spacing="0.5">v4</text>
+    </svg>
+  </div>
+  <div class="q-bar"><div class="q-fill" id="q-fill"></div></div>
+  <div class="q-text" id="q-status">initializing</div>
+  <div class="q-err" id="q-err"></div>
+  <div style="position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:7px;opacity:.18">
+    <svg width="14" height="14" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <rect x="14" y="28" width="36" height="26" rx="5" fill="none" stroke="#fff" stroke-width="2.5"/>
+      <path d="M20 28V22a12 12 0 0 1 24 0v6" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="32" cy="40" r="3.5" fill="#fff"/>
+      <rect x="30.5" y="41" width="3" height="5" rx="1" fill="#fff"/>
+      <text x="32" y="58" text-anchor="middle" font-size="6" font-family="monospace" fill="#fff" letter-spacing="0.5">v4</text>
+    </svg>
+    <span style="color:#fff;font-size:10px;font-family:monospace;letter-spacing:2px">QONO SECURE</span>
+  </div>
+</div>
+<iframe id="qono-frame"></iframe>
+
+<!-- Qono Secure Badge — sağ alt köşe -->
+<div id="qono-badge" title="Qono Secure V4">
+  <!-- Kalkan -->
+  <svg width="28" height="28" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 1px 3px rgba(0,0,0,.35))">
+    <!-- Kalkan dış gövde -->
+    <path d="M16 3 L28 7.5 L28 16 C28 22.5 22.5 27.5 16 30 C9.5 27.5 4 22.5 4 16 L4 7.5 Z"
+          fill="rgba(10,10,10,0.55)" stroke="rgba(255,255,255,0.13)" stroke-width="0.8"/>
+    <!-- Kalkan iç çizgi (dekoratif) -->
+    <path d="M16 5.5 L26 9.5 L26 16 C26 21.5 21.5 26 16 28.2 C10.5 26 6 21.5 6 16 L6 9.5 Z"
+          fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="0.6"/>
+    <!-- Şık Q harfi -->
+    <text x="16" y="21" text-anchor="middle"
+          font-family="Georgia,serif" font-size="13" font-weight="700"
+          fill="rgba(255,255,255,0.72)" letter-spacing="-0.5">Q</text>
+    <!-- Q'nun kuyruğu (serif Q efekti) -->
+    <line x1="19" y1="19.5" x2="21.5" y2="22.5"
+          stroke="rgba(255,255,255,0.55)" stroke-width="1.2" stroke-linecap="round"/>
+  </svg>
+</div>
+
+<script>
+(async () => {
+  const fill   = document.getElementById('q-fill');
+  const status = document.getElementById('q-status');
+  const errBox = document.getElementById('q-err');
+  const frame  = document.getElementById('qono-frame');
+  const loader = document.getElementById('qono-loader');
+
+  function setProgress(p, msg) {
+    fill.style.width = p + '%';
+    status.textContent = msg;
+  }
+
+  function fatal(msg) {
+    errBox.style.display = 'block';
+    errBox.textContent   = '⚠ ' + msg;
+    status.textContent   = 'failed';
+    fill.style.background = '#ff4444';
+  }
+
+  // Anti-DevTools: açıksa yükleme
+  let devOpen = false;
+  const _t = new Image();
+  Object.defineProperty(_t, 'id', { get: () => { devOpen = true; return ''; } });
+  console.log('%c', _t);
+
+  try {
+    setProgress(10, 'loading keys');
+    await new Promise(r => setTimeout(r, 120));
+
+    // v4.datables yükle
+    const dtRes = await fetch('v4.datables', { cache: 'no-store' });
+    if (!dtRes.ok) throw new Error('v4.datables bulunamadı');
+    const dtText = await dtRes.text();
+
+    setProgress(25, 'parsing keystore');
+    await new Promise(r => setTimeout(r, 80));
+
+    // _Q4 nesnesini güvenli şekilde çek
+    const match = dtText.match(/const _Q4=\([\s\S]*?\)\(\);/);
+    if (!match) throw new Error('Geçersiz keystore formatı');
+    const keyData = Function('"use strict";' + match[0] + ';return _Q4;')();
+
+    const { k1, iv, k2, seed, split } = keyData;
+    if (!k1 || !iv || !k2 || seed == null || split == null)
+      throw new Error('Eksik anahtar verisi');
+
+    setProgress(40, 'fetching parts');
+    await new Promise(r => setTimeout(r, 80));
+
+    // İki parçayı paralel çek
+    const [r1, r2] = await Promise.all([
+      fetch('zzz.secure',  { cache: 'no-store' }),
+      fetch('zzz.secures', { cache: 'no-store' })
+    ]);
+    if (!r1.ok || !r2.ok) throw new Error('Şifreli dosyalar bulunamadı');
+
+    const [part1, part2] = await Promise.all([r1.text(), r2.text()]);
+    if (!part1 || !part2) throw new Error('Boş veri dosyası');
+
+    setProgress(55, 'assembling');
+    await new Promise(r => setTimeout(r, 60));
+
+    // Birleştir
+    const combined = part1 + part2;
+
+    setProgress(65, 'layer 3 — unshuffle');
+    await new Promise(r => setTimeout(r, 60));
+
+    // Katman 3: Unshuffle
+    function unshuffle(str, seedVal) {
+      const chars  = str.split('');
+      const len    = chars.length;
+      const swaps  = [];
+      let s = seedVal;
+      for (let i = len - 1; i > 0; i--) {
+        s = (s * 1664525 + 1013904223) & 0xFFFFFFFF;
+        swaps.push([i, Math.abs(s) % (i + 1)]);
+      }
+      for (let idx = swaps.length - 1; idx >= 0; idx--) {
+        const [i, j] = swaps[idx];
+        [chars[i], chars[j]] = [chars[j], chars[i]];
+      }
+      return chars.join('');
+    }
+    const layer2 = unshuffle(combined, seed);
+
+    setProgress(75, 'layer 2 — xor');
+    await new Promise(r => setTimeout(r, 60));
+
+    // Katman 2: XOR geri al
+    function xorDeobfuscate(b64, xorKeyStr) {
+      const raw = atob(b64);
+      let result = '';
+      for (let i = 0; i < raw.length; i++) {
+        result += String.fromCharCode(raw.charCodeAt(i) ^ xorKeyStr.charCodeAt(i % xorKeyStr.length));
+      }
+      return result;
+    }
+    const layer1 = xorDeobfuscate(layer2, k2);
+
+    setProgress(85, 'layer 1 — aes-256');
+    await new Promise(r => setTimeout(r, 80));
+
+    // Katman 1: AES-256-CBC (Web Crypto API)
+    function hexToBytes(hex) {
+      const arr = new Uint8Array(hex.length / 2);
+      for (let i = 0; i < hex.length; i += 2)
+        arr[i / 2] = parseInt(hex.substr(i, 2), 16);
+      return arr;
+    }
+
+    const rawKey = hexToBytes(k1);
+    const rawIV  = hexToBytes(iv);
+
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw', rawKey, { name: 'AES-CBC' }, false, ['decrypt']
+    );
+
+    // Base64 → ArrayBuffer
+    const encBin = atob(layer1);
+    const encBuf = new Uint8Array(encBin.length);
+    for (let i = 0; i < encBin.length; i++) encBuf[i] = encBin.charCodeAt(i);
+
+    const decBuf  = await crypto.subtle.decrypt(
+      { name: 'AES-CBC', iv: rawIV }, cryptoKey, encBuf
+    );
+    const htmlContent = new TextDecoder().decode(decBuf);
+
+    setProgress(95, 'rendering');
+    await new Promise(r => setTimeout(r, 80));
+
+    // Güvenli render: iframe içine srcDoc olarak yaz (asla window'da kaynak görünmez)
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const blobURL = URL.createObjectURL(blob);
+    frame.src = blobURL;
+
+    frame.onload = () => {
+      setProgress(100, 'secured');
+      try {
+        const t = frame.contentDocument?.title;
+        if (t) document.title = t;
+      } catch(e) {}
+      setTimeout(() => {
+        loader.style.transition = 'opacity .4s';
+        loader.style.opacity = '0';
+        setTimeout(() => {
+          loader.style.display = 'none';
+          frame.style.display  = 'block';
+          URL.revokeObjectURL(blobURL);
+          // Badge'i göster — hafif soluk, hover'da belirginleşir
+          const badge = document.getElementById('qono-badge');
+          badge.classList.add('visible');
+          badge.style.opacity = '0.28';
+          badge.addEventListener('mouseenter', () => badge.style.opacity = '0.85');
+          badge.addEventListener('mouseleave', () => badge.style.opacity = '0.28');
+        }, 420);
+      }, 200);
+    };
+
+  } catch (err) {
+    fatal(err.message || 'Bilinmeyen hata');
+    console.error('[QonoSecure]', err);
+  }
+})();
+
+// Sağ tık engelle
+document.addEventListener('contextmenu', e => e.preventDefault());
+// Klavye kısayollarını engelle
+document.addEventListener('keydown', e => {
+  if (e.key === 'F12' ||
+      (e.ctrlKey && e.shiftKey && ['I','J','C','U','S'].includes(e.key.toUpperCase())) ||
+      (e.ctrlKey && e.key.toLowerCase() === 'u')) {
+    e.preventDefault(); e.stopPropagation();
+  }
+});
+</script>
+</body>
+</html>
